@@ -1,13 +1,12 @@
 // 3k keypad for osu!
 // Things added:
 // - WS2812B initialisation
-// - Basic keypress functionality
+// - Basic keypress functionality (very unoptimised)
 // - Empty functions for multicore usage (haven't been used yet though)
-// - All switch LEDs light up when any key is pressed
+// - Reactive switch LEDs (very unoptimised)
 // - Another pio instance for underglow LEDs
 // To do:
-// - Figure out how to get LEDs to light up individually
-// - Figure out how to get underglow LEDs to even work (I AM IN PAIN)
+// - Optimise everything help
 // - Figure out how to move all lightning to second core
 // - Add 1000hz support
 // - Add debounce
@@ -40,12 +39,12 @@ const int swLEDGPIO = 26;
 const int uLEDGPIO = 25;
 
 //put pixel function
-static inline void put_pixel(uint32_t pixel_grb) {
+static inline void sw_put_pixel(uint32_t pixel_grb) {
   pio_sm_put_blocking(pio0, 0, pixel_grb << 8u);
 }
 
 //would this even work? does not seem to be working
-static inline void put_pixel_1(uint32_t pixel_grb) {
+static inline void u_put_pixel(uint32_t pixel_grb) {
   pio_sm_put_blocking(pio1, 0, pixel_grb << 8u);
 }
 
@@ -73,9 +72,8 @@ void init() {
 
   // Set up underglow LEDs
   PIO pio_1 = pio1;
-  int sm1 = 1;
   uint offset1 = pio_add_program(pio_1, &ws2812_program);
-  ws2812_program_init(pio_1, sm1, offset1, uLEDGPIO, 800000, false);
+  ws2812_program_init(pio_1, sm, offset1, uLEDGPIO, 800000, false);
 }
 
 void keyboard() {
@@ -88,7 +86,8 @@ void keyboard() {
 
   if (tud_hid_ready()) {
     bool isPressed = false;
-  
+
+    //this is an unoptimised way to deal with the keys, you can't press multiple keys at once
     for(int i = 0; i < swGPIOsize; i++) {
       if(!gpio_get(swGPIO[i])) {
         //use to avoid send multiple consecutive zero report for keyboard
@@ -97,19 +96,37 @@ void keyboard() {
 
         tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
         
-        //switch LED lights up when keys are pressed
-        put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
-        put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
-        put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
         isPressed = true;
       }
+
+      //this is a terrible way to implement reactive LEDs
+      if(!gpio_get(swGPIO[0])){
+        //switch LED lights up when keys are pressed
+        sw_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
+        sw_put_pixel(urgb_u32(0,0,0)); //No LED
+        sw_put_pixel(urgb_u32(0,0,0)); //No LED
+      }
+      else if(!gpio_get(swGPIO[1])){
+        //switch LED lights up when keys are pressed
+        sw_put_pixel(urgb_u32(0,0,0)); //No LED
+        sw_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
+        sw_put_pixel(urgb_u32(0,0,0)); //No LED
+      }
+
+      else if(!gpio_get(swGPIO[2])){
+        //switch LED lights up when keys are pressed
+        sw_put_pixel(urgb_u32(0,0,0)); //No LED
+        sw_put_pixel(urgb_u32(0,0,0)); //No LED
+        sw_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
+      }
+      
     }
     // send empty key report if previously has key pressed
     if(!isPressed) {tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);}
 
     // clear LEDs
     for(int i=0; i<3; i++){
-      put_pixel(urgb_u32(0,0,0)); //Turn off LEDs
+      sw_put_pixel(urgb_u32(0,0,0)); //Turn off LEDs
     }
   }
 }
@@ -135,8 +152,8 @@ int main(void)
   multicore_launch_core1(core1_entry); // Start core 1 - must be called before configuring interrupts
 
   //turn on underglow LEDs (it's not working though)
-  put_pixel_1(urgb_u32(0xff,0,0)); //Turn on LED (red)
-  put_pixel_1(urgb_u32(0,0xff,0)); //Turn on LED (green)
+  u_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
+  u_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
   
   while(1) {
     tud_task();
