@@ -1,3 +1,0 @@
-/home/dev/keypad/build/pioasm/CMakeFiles/pioasm.dir
-/home/dev/keypad/build/pioasm/CMakeFiles/edit_cache.dir
-/home/dev/keypad/build/pioasm/CMakeFiles/rebuild_cache.dir
