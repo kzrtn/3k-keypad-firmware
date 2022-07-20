@@ -1,9 +1,8 @@
 // 3k keypad for osu!
 // Things added:
-// - WS2812B initialisation
 // - Basic keypress functionality (very unoptimised)
 // - Empty functions for multicore usage (haven't been used yet though)
-// - Reactive switch LEDs (very unoptimised)
+// - Reactive switch LEDs
 // - Another pio instance for underglow LEDs
 // To do:
 // - Optimise everything help
@@ -43,7 +42,6 @@ static inline void sw_put_pixel(uint32_t pixel_grb) {
   pio_sm_put_blocking(pio0, 0, pixel_grb << 8u);
 }
 
-//would this even work? does not seem to be working
 static inline void u_put_pixel(uint32_t pixel_grb) {
   pio_sm_put_blocking(pio1, 0, pixel_grb << 8u);
 }
@@ -101,31 +99,28 @@ void keyboard() {
       }
 
       // get button input and convert to byte for next step
-      uint8_t byte0 = (!gpio_get(swGPIO[2])) ? 0xff : 0x00;
-      uint8_t byte1 = (!gpio_get(swGPIO[2])) ? 0xff : 0x00;
+      uint8_t byte0 = (!gpio_get(swGPIO[0])) ? 0xff : 0x00;
+      uint8_t byte1 = (!gpio_get(swGPIO[1])) ? 0xff : 0x00;
       uint8_t byte2 = (!gpio_get(swGPIO[2])) ? 0xff : 0x00;
+      uint8_t bytearray[] = {byte0, byte1, byte2};
 
-      // set data array
-      ledColorData =
-      {
-        byte0, byte0, byte0,
-        byte1, byte1, byte1,
-        byte2, byte2, byte2
-      }
-
-      // set pixels according to the data array
+      // Set array and put pixels
       for(uint8_t ledNr = 0; ledNr < 3; ledNr++)
       {
+        // set LED data array
+        ledColorData[ledNr * 3] = bytearray[ledNr];
+        ledColorData[ledNr * 3 + 1] = bytearray[ledNr];
+        ledColorData[ledNr * 3 + 2] = bytearray[ledNr];
+
+        // put pixels
         sw_put_pixel(urgb_u32(
           ledColorData[ledNr * 3],
           ledColorData[ledNr * 3 + 1],
           ledColorData[ledNr * 3 + 2]));
       }
-      
     }
     // send empty key report if previously has key pressed
     if(!isPressed) {tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);}
-    }
   }
 }
 
