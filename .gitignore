@@ -1,0 +1,3 @@
+# Git should ignore these directories
+.vscode/
+build/
