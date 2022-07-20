@@ -80,6 +80,7 @@ void keyboard() {
   //poll every 1ms? I don't think this actually works
   const uint32_t interval_ms = 1;
   static uint32_t start_ms = 0;
+  static uint8_t ledColorData[9] = {};
 
   if(board_millis() - start_ms < interval_ms) return;
   start_ms += interval_ms;
@@ -99,34 +100,31 @@ void keyboard() {
         isPressed = true;
       }
 
-      //this is a terrible way to implement reactive LEDs
-      if(!gpio_get(swGPIO[0])){
-        //switch LED lights up when keys are pressed
-        sw_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
-        sw_put_pixel(urgb_u32(0,0,0)); //No LED
-        sw_put_pixel(urgb_u32(0,0,0)); //No LED
-      }
-      else if(!gpio_get(swGPIO[1])){
-        //switch LED lights up when keys are pressed
-        sw_put_pixel(urgb_u32(0,0,0)); //No LED
-        sw_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
-        sw_put_pixel(urgb_u32(0,0,0)); //No LED
+      // get button input and convert to byte for next step
+      uint8_t byte0 = (!gpio_get(swGPIO[2])) ? 0xff : 0x00;
+      uint8_t byte1 = (!gpio_get(swGPIO[2])) ? 0xff : 0x00;
+      uint8_t byte2 = (!gpio_get(swGPIO[2])) ? 0xff : 0x00;
+
+      // set data array
+      ledColorData =
+      {
+        byte0, byte0, byte0,
+        byte1, byte1, byte1,
+        byte2, byte2, byte2
       }
 
-      else if(!gpio_get(swGPIO[2])){
-        //switch LED lights up when keys are pressed
-        sw_put_pixel(urgb_u32(0,0,0)); //No LED
-        sw_put_pixel(urgb_u32(0,0,0)); //No LED
-        sw_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
+      // set pixels according to the data array
+      for(uint8_t ledNr = 0; ledNr < 3; ledNr++)
+      {
+        sw_put_pixel(urgb_u32(
+          ledColorData[ledNr * 3],
+          ledColorData[ledNr * 3 + 1],
+          ledColorData[ledNr * 3 + 2]));
       }
       
     }
     // send empty key report if previously has key pressed
     if(!isPressed) {tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);}
-
-    // clear LEDs
-    for(int i=0; i<3; i++){
-      sw_put_pixel(urgb_u32(0,0,0)); //Turn off LEDs
     }
   }
 }
