@@ -1,5 +1,5 @@
 // Header file for debounce.c
-#include "debounce.c"
+#include "globals.h"
 
 extern uint64_t swTimestamp[swGPIOsize];
 

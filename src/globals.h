@@ -8,11 +8,11 @@
 
 #ifdef MAIN_C
 
-const uint8_t swGPIO[] = {27, 28, 29};                          // Switch GPIO pins
-const uint8_t swKeycode[] = {HID_KEY_Z, HID_KEY_X, HID_KEY_C};  // Keybinds
+extern const uint8_t swGPIO[] = {27, 28, 29};                          // Switch GPIO pins
+extern const uint8_t swKeycode[] = {HID_KEY_Z, HID_KEY_X, HID_KEY_C};  // Keybinds
 
-const int swLEDGPIO = 26;                                       // Switch LED GPIO pin
-const int uLEDGPIO = 25;                                        // Underglow LED GPIO pin
+extern const int swLEDGPIO = 26;                                       // Switch LED GPIO pin
+extern const int uLEDGPIO = 25;                                        // Underglow LED GPIO pin
 
 #endif
 #endif

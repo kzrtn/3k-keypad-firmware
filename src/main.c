@@ -34,7 +34,7 @@
 //#include "LEDs.h"
 #include "usb_descriptors.h"
 
-#include "main.h"
+#include "globals.h"
 
 // For debounce
 bool prev_sw_value[swGPIOsize]; //not sure if I'll need this yet
