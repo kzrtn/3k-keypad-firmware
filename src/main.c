@@ -8,6 +8,7 @@
 // - Figure out how to move all lighting to second core
 // - Add debounce
 // - Add configuration software for light modes and custom key config (somehow...)
+#define MAIN_C
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -23,20 +24,22 @@
 
 //WS2812B stuff
 #include "hardware/pio.h"
-#include "hardware/clocks.h"
+#include "hardware/clocks.h" // I don't think this is used right now
 #include "generated/ws2812.pio.h"
 
+//debounce stuff
+#include "hardware/timer.h"
+#include "debounce.h"
+
+//#include "LEDs.h"
 #include "usb_descriptors.h"
 
-#define swGPIOsize 3 // Number of key switches
-#define swLEDsize 3 // Number of key LEDs
-#define uLEDsize 2 // Number of underglow LEDs
+#include "main.h"
 
-const uint8_t swKeycode[] = {HID_KEY_Z, HID_KEY_X, HID_KEY_C};
-
-const uint8_t swGPIO[] = {27, 28, 29};
-const int swLEDGPIO = 26;
-const int uLEDGPIO = 25;
+// For debounce
+bool prev_sw_value[swGPIOsize]; //not sure if I'll need this yet
+uint64_t swTimestamp[swGPIOsize];
+uint8_t swReport;
 
 // Put pixel function
 static inline void sw_put_pixel(uint32_t pixel_grb) {
@@ -86,8 +89,11 @@ void keyboard() {
     // 6 key rollover, a limitation by USB HID, NKRO is possible but... is it even needed?
     for (uint8_t i = 0; i < swGPIOsize; i++) {
       if(!gpio_get(swGPIO[i])) {
+        swTimestamp[i] = time_us_64;
+
         keycode[keycodeIndex] = swKeycode[i];
         keycodeIndex++;
+        
         isPressed = true;
       }
     }
