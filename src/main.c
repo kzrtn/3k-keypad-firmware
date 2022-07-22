@@ -10,30 +10,6 @@
 // - Add configuration software for light modes and custom key config (somehow...)
 #define MAIN_C
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-
-#include "bsp/board.h"
-#include "tusb.h"
-#include "pico/stdlib.h"
-
-//multicore stuff
-#include "pico/multicore.h"
-#include "hardware/irq.h"
-
-//WS2812B stuff
-#include "hardware/pio.h"
-#include "hardware/clocks.h" // I don't think this is used right now
-#include "generated/ws2812.pio.h"
-
-//debounce stuff
-#include "hardware/timer.h"
-#include "debounce.h"
-
-//#include "LEDs.h"
-#include "usb_descriptors.h"
-
 #include "globals.h"
 
 // For debounce
