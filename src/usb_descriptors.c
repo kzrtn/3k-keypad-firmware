@@ -99,12 +99,11 @@ enum
   ITF_NUM_TOTAL
 };
 
-#define  CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_MSC_DESC_LEN + TUD_HID_DESC_LEN)
+#define  CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_HID_DESC_LEN + TUD_MSC_DESC_LEN)
 
-#define EPNUM_HID   0x81
-#define EPNUM_MSC_OUT   0x01 // TODO: Check if correct
-#define EPNUM_MSC_IN    0x82 // TODO: Check if correct
-
+#define EPNUM_HID       0x81
+#define EPNUM_MSC_OUT   0x03 // TODO: Check if correct
+#define EPNUM_MSC_IN    0x83 // TODO: Check if correct
 
 
 uint8_t const desc_configuration[] =
@@ -112,11 +111,11 @@ uint8_t const desc_configuration[] =
   // Config number, interface count, string index, total length, attribute, power in mA
   TUD_CONFIG_DESCRIPTOR(1, ITF_NUM_TOTAL, 0, CONFIG_TOTAL_LEN, TUSB_DESC_CONFIG_ATT_REMOTE_WAKEUP, 100),
 
-  // Interface number, string index, out, in, endpoint size
-  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 0, EPNUM_MSC_OUT, EPNUM_MSC_IN, 512),
-
   // Interface number, string index, protocol, report descriptor len, EP In address, size & polling interval
-  TUD_HID_DESCRIPTOR(ITF_NUM_HID, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID, CFG_TUD_HID_EP_BUFSIZE, 1)
+  TUD_HID_DESCRIPTOR(ITF_NUM_HID, 0, HID_ITF_PROTOCOL_NONE, sizeof(desc_hid_report), EPNUM_HID, CFG_TUD_HID_EP_BUFSIZE, 1),
+
+  // Interface number, string index, out, in, endpoint size
+  TUD_MSC_DESCRIPTOR(ITF_NUM_MSC, 0, EPNUM_MSC_OUT, EPNUM_MSC_IN, 64)
 };
 
 // Invoked when received GET CONFIGURATION DESCRIPTOR
@@ -137,10 +136,12 @@ uint8_t const * tud_descriptor_configuration_cb(uint8_t index)
 // array of pointer to string descriptors
 char const* string_desc_arr [] =
 {
-  (const char[]) { 0x09, 0x04 }, // 0: is supported language is English (0x0409)
-  "kzrtn",                     // 1: Manufacturer
-  "3k_keypad",              // 2: Product
-  "123456",                      // 3: Serials, should use chip ID
+  (const char[]) { 0x09, 0x04 },  // 0: is supported language is English (0x0409)
+  "kzrtn",                        // 1: Manufacturer
+  "3k_keypad",                    // 2: Product
+  "123456",                       // 3: Serials, should use chip ID
+  "HID",                          // 4: Interface 1 (HID)
+  "MSC",                          // 5: Interface 2 (MSC)
 };
 
 static uint16_t _desc_str[32];
