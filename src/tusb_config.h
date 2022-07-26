@@ -72,12 +72,15 @@
 //------------- CLASS -------------//
 #define CFG_TUD_HID               1
 #define CFG_TUD_CDC               0
-#define CFG_TUD_MSC               0
+#define CFG_TUD_MSC               1
 #define CFG_TUD_MIDI              0
 #define CFG_TUD_VENDOR            0
 
 // HID buffer size Should be sufficient to hold ID (if any) + Data
 #define CFG_TUD_HID_EP_BUFSIZE    16
+
+// MSC Buffer size of Device Mass storage
+#define CFG_TUD_MSC_EP_BUFSIZE    512
 
 #ifdef __cplusplus
  }
