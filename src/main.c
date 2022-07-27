@@ -101,7 +101,7 @@ void keyboard() {
     // If the keycode changed, send a HID report
     if (memcmp(keycode, keycodePrevious, 6) != 0)
     {
-      tud_hid_keyboard_report(0, 0, keycode);
+      tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
 
       // Save the changed keycode
       memcpy(keycodePrevious, keycode, 6);
