@@ -38,13 +38,15 @@ const uint8_t swGPIO[] = {27, 28, 29};
 const int swLEDGPIO = 26;
 const int uLEDGPIO = 25;
 
+const PIO pioLeds = pio1;
+
 // Put pixel function
 static inline void sw_put_pixel(uint32_t pixel_grb) {
-  pio_sm_put_blocking(pio0, 0, pixel_grb << 8u);
+  pio_sm_put_blocking(pioLeds, 0, pixel_grb << 8u);
 }
 
 static inline void u_put_pixel(uint32_t pixel_grb) {
-  pio_sm_put_blocking(pio1, 0, pixel_grb << 8u);
+  pio_sm_put_blocking(pioLeds, 1, pixel_grb << 8u);
 }
 
 static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
@@ -65,9 +67,9 @@ void init() {
   }
 
   // Set up switch LEDs and underglow LEDs
-  uint offsetWs2812 = pio_add_program(pio0, &ws2812_program);
-  ws2812_program_init(pio0, 0, offsetWs2812, swLEDGPIO, 800000, false);
-  ws2812_program_init(pio0, 1, offsetWs2812, uLEDGPIO, 800000, false);
+  uint offsetWs2812 = pio_add_program(pioLeds, &ws2812_program);
+  ws2812_program_init(pioLeds, 0, offsetWs2812, swLEDGPIO, 800000, false);
+  ws2812_program_init(pioLeds, 1, offsetWs2812, uLEDGPIO, 800000, false);
 }
 
 void keyboard() {
