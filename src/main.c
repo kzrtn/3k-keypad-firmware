@@ -64,16 +64,10 @@ void init() {
     gpio_pull_up(swGPIO[i]);
   }
 
-  // Set up switch LEDs
-  PIO pio = pio0;
-  int sm = 0;
-  uint offset = pio_add_program(pio, &ws2812_program);
-  ws2812_program_init(pio, sm, offset, swLEDGPIO, 800000, false);
-
-  // Set up underglow LEDs
-  PIO pio_1 = pio1;
-  uint offset1 = pio_add_program(pio_1, &ws2812_program);
-  ws2812_program_init(pio_1, sm, offset1, uLEDGPIO, 800000, false);
+  // Set up switch LEDs and underglow LEDs
+  uint offsetWs2812 = pio_add_program(pio0, &ws2812_program);
+  ws2812_program_init(pio0, 0, offsetWs2812, swLEDGPIO, 800000, false);
+  ws2812_program_init(pio0, 1, offsetWs2812, uLEDGPIO, 800000, false);
 }
 
 void keyboard() {
