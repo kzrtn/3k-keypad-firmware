@@ -26,6 +26,9 @@
 #include "hardware/clocks.h"
 #include "ws2812.pio.h"
 
+//debounce stuff
+#include "debounce.pio.h"
+
 #include "usb_descriptors.h"
 
 #define swGPIOsize 3 // Number of key switches
@@ -38,7 +41,9 @@ const uint8_t swGPIO[] = {27, 28, 29};
 const int swLEDGPIO = 26;
 const int uLEDGPIO = 25;
 
+const PIO pioDebounce = pio0;
 const PIO pioLeds = pio1;
+const float debounceTimeMs = 10.0f;
 
 // Put pixel function
 static inline void sw_put_pixel(uint32_t pixel_grb) {
@@ -59,11 +64,13 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
 /*------------- INIT -------------*/
 void init() {
   // Set up button pins
-  for (int i = 0; i < swGPIOsize; i++) {
-    gpio_init(swGPIO[i]);
-    gpio_set_function(swGPIO[i], GPIO_FUNC_SIO);
-    gpio_set_dir(swGPIO[i], GPIO_IN);
-    gpio_pull_up(swGPIO[i]);
+  uint offsetDebounce = pio_add_program(pioDebounce, &debounce_program);
+
+  for (int i = 0; i < swGPIOsize; i++)
+  {
+    debounce_program_init(pioDebounce, i, offsetDebounce, swGPIO[i]);
+    pio_sm_set_enabled(pioDebounce, i, true);
+    debounce_program_set_debounce(pioDebounce, i, debounceTimeMs);
   }
 
   // Set up switch LEDs and underglow LEDs
@@ -80,8 +87,10 @@ void keyboard() {
 
     // Fill keycode array
     // 6 key rollover, a limitation by USB HID, NKRO is possible but... is it even needed?
-    for (uint8_t i = 0; i < swGPIOsize; i++) {
-      if(!gpio_get(swGPIO[i])) {
+    for (uint8_t i = 0; i < swGPIOsize; i++)
+    {
+      if(debounce_program_get_button_pressed(pioDebounce, i))
+      {
         keycode[keycodeIndex] = swKeycode[i];
         keycodeIndex++;
         isPressed = true;
