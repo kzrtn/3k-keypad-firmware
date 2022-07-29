@@ -24,7 +24,7 @@
 //WS2812B stuff
 #include "hardware/pio.h"
 #include "hardware/clocks.h"
-#include "generated/ws2812.pio.h"
+#include "ws2812.pio.h"
 
 #include "usb_descriptors.h"
 
