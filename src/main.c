@@ -31,6 +31,8 @@
 
 #include "usb_descriptors.h"
 
+#include "EventGenerator.h"
+
 #define swGPIOsize 3 // Number of key switches
 #define swLEDsize 3 // Number of key LEDs
 #define uLEDsize 2 // Number of underglow LEDs
