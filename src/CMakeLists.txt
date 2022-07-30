@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.13)
 add_executable(3k_keypad
         main.c
         usb_descriptors.c
-        EventGenerator.c)
+        EventGenerator.c
+        StateMachine.c)
 
 # Make sure TinyUSB can find tusb_config.h
 target_include_directories(3k_keypad PRIVATE ${CMAKE_CURRENT_LIST_DIR})

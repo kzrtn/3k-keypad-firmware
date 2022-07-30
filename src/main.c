@@ -31,7 +31,7 @@
 
 #include "usb_descriptors.h"
 
-#include "EventGenerator.h"
+#include "StateMachine.h"
 
 #define swGPIOsize 3 // Number of key switches
 #define swLEDsize 3 // Number of key LEDs
@@ -152,6 +152,21 @@ int main(void)
   init();
 
   multicore_launch_core1(core1_entry); // Start core 1 - must be called before configuring interrupts
+
+  // Check if the user wants to enter led config mode
+  bool enterConfigMode = true;
+
+  // All buttons must be pressed
+  for (uint8_t i = 0; i < swGPIOsize; i++)
+  {
+    enterConfigMode &= debounce_program_get_button_pressed(pioDebounce, i);
+  } 
+
+  if (enterConfigMode)
+  {
+    // Keep running the state maching until it returns false
+    while (HandleStateMachine()); 
+  } 
 
   // Turn on underglow LEDs
   u_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
