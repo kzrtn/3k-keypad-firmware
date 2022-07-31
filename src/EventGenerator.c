@@ -1,16 +1,21 @@
 #include "EventGenerator.h"
+#include "hardware/clocks.h"
+#include "debounce.pio.h"
 
-static SEvent event = {};
-static bool buttonStatePrev[] = {false, false, false};
+extern const uint8_t swGPIOsize;
+extern const PIO pioDebounce;
+
+static SEvent event = {0};
+static bool buttonStatePrev[] = {true, true, true}; // State machine is entered with button states true
 
 void UpdateEventGenerator()
 {
   bool buttonStateCurr[3];
-  buttonStateCurr[0] = false; // TODO: Get the button states and put them in the array
-  buttonStateCurr[1] = false;
-  buttonStateCurr[2] = false;
 
-  for (int i = 0; i < 3; i++)
+  for (uint8_t i = 0; i < swGPIOsize; i++)
+    buttonStateCurr[0] = debounce_program_get_button_pressed(pioDebounce, i);
+
+  for (uint8_t i = 0; i < swGPIOsize; i++)
   {
     event.KeyPressed[i] = false; // Clear event in case it was true in the previous update
 

@@ -1,6 +1,18 @@
 #include "StateMachine.h"
+#include "EventGenerator.h"
+
+typedef enum State
+{
+  ChooseLed,
+  UnderglowConfig,
+  SwitchLedConfig
+} EState;
 
 static EState state = ChooseLed;
+
+bool Handle_ChooseLed();
+bool Handle_UnderglowConfig();
+bool Handle_SwitchLedConfig();
 
 bool HandleStateMachine()
 {

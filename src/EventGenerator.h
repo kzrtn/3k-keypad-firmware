@@ -1,7 +1,7 @@
 #ifndef EVENT_GENERATOR_H
 #define EVENT_GENERATOR_H
 
-#include <stdbool.h> // TODO: Remove later on
+#include <stdbool.h>
 
 typedef struct Event
 {

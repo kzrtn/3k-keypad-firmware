@@ -33,9 +33,9 @@
 
 #include "StateMachine.h"
 
-#define swGPIOsize 3 // Number of key switches
-#define swLEDsize 3 // Number of key LEDs
-#define uLEDsize 2 // Number of underglow LEDs
+const uint8_t swGPIOsize = 3; // Number of key switches
+const uint8_t swLEDsize = 3;  // Number of key LEDs
+const uint8_t uLEDsize = 2;   // Number of underglow LEDs
 
 const uint8_t swKeycode[] = {HID_KEY_Z, HID_KEY_X, HID_KEY_C};
 
