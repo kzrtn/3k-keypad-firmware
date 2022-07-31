@@ -1,5 +1,10 @@
 #include "StateMachine.h"
 #include "EventGenerator.h"
+#include "pico/stdlib.h"
+
+void sw_put_pixel(uint32_t pixel_grb);
+void u_put_pixel(uint32_t pixel_grb);
+uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b);
 
 typedef enum State
 {
@@ -35,6 +40,12 @@ bool HandleStateMachine()
 bool Handle_ChooseLed()
 {
   // Do state stuff
+  sw_put_pixel(urgb_u32(100, 0, 0));
+  sw_put_pixel(urgb_u32(100, 0, 0));
+  sw_put_pixel(urgb_u32(100, 0, 0));
+  u_put_pixel(urgb_u32(100, 0, 0));
+  u_put_pixel(urgb_u32(100, 0, 0));
+  sleep_ms(1);
 
   // Check for event
   SEvent event = GetEvent();
@@ -53,8 +64,19 @@ bool Handle_ChooseLed()
 bool Handle_UnderglowConfig()
 {
   // Do state stuff
+  sw_put_pixel(urgb_u32(0, 100, 0));
+  sw_put_pixel(urgb_u32(0, 100, 0));
+  sw_put_pixel(urgb_u32(0, 100, 0));
+  u_put_pixel(urgb_u32(0, 100, 0));
+  u_put_pixel(urgb_u32(0, 100, 0));
+  sleep_ms(1);
 
   // Check for event
+  SEvent event = GetEvent();
+  if (event.KeyPressed[2])
+  {
+    return false; // Exit state machine
+  }
 
   return true;
 }
@@ -62,8 +84,19 @@ bool Handle_UnderglowConfig()
 bool Handle_SwitchLedConfig()
 {
   // Do state stuff
+  sw_put_pixel(urgb_u32(0, 0, 100));
+  sw_put_pixel(urgb_u32(0, 0, 100));
+  sw_put_pixel(urgb_u32(0, 0, 100));
+  u_put_pixel(urgb_u32(0, 0, 100));
+  u_put_pixel(urgb_u32(0, 0, 100));
+  sleep_ms(1);
 
   // Check for event
+  SEvent event = GetEvent();
+  if (event.KeyPressed[2])
+  {
+    return false; // Exit state machine
+  }
 
   return true;
 }

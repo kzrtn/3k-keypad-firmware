@@ -48,15 +48,15 @@ const PIO pioLeds = pio1;
 const float debounceTimeMs = 10.0f;
 
 // Put pixel function
-static inline void sw_put_pixel(uint32_t pixel_grb) {
+void sw_put_pixel(uint32_t pixel_grb) {
   pio_sm_put_blocking(pioLeds, 0, pixel_grb << 8u);
 }
 
-static inline void u_put_pixel(uint32_t pixel_grb) {
+void u_put_pixel(uint32_t pixel_grb) {
   pio_sm_put_blocking(pioLeds, 1, pixel_grb << 8u);
 }
 
-static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
+uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
   return ((uint32_t)(r) << 8) |
         ((uint32_t)(g) << 16) |
         (uint32_t)(b);

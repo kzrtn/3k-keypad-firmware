@@ -13,7 +13,7 @@ void UpdateEventGenerator()
   bool buttonStateCurr[3];
 
   for (uint8_t i = 0; i < swGPIOsize; i++)
-    buttonStateCurr[0] = debounce_program_get_button_pressed(pioDebounce, i);
+    buttonStateCurr[i] = debounce_program_get_button_pressed(pioDebounce, i);
 
   for (uint8_t i = 0; i < swGPIOsize; i++)
   {
