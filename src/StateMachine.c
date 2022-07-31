@@ -1,5 +1,6 @@
 #include "StateMachine.h"
 #include "EventGenerator.h"
+#include "FlashStorage.h"
 #include "pico/stdlib.h"
 
 void sw_put_pixel(uint32_t pixel_grb);
