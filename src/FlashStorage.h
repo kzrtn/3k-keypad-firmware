@@ -8,8 +8,8 @@
 
 typedef struct LedConfiguration
 {
-  uint8_t SwitchLedColor[3];
-  uint8_t UnderglowLedColor[2];
+  uint32_t SwitchLedColor[3];
+  uint32_t UnderglowLedColor[2];
   // Add more config stuff here
 } SLedConfiguration;
 

@@ -18,6 +18,7 @@ void WriteLedConfigToFlash(SLedConfiguration ledConfig)
   // Copy the struct to a buffer
   memcpy(buffer, (uint8_t*)&ledConfig, LED_CONFIG_SIZE); 
   
+  // TODO: If we go multicore we will probably need a mutex here
   // Disable interrupts while writing to flash
   uint32_t interrupts = save_and_disable_interrupts();
 

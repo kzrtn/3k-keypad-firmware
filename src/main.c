@@ -32,6 +32,7 @@
 #include "usb_descriptors.h"
 
 #include "StateMachine.h"
+#include "FlashStorage.h"
 
 const uint8_t swGPIOsize = 3; // Number of key switches
 const uint8_t swLEDsize = 3;  // Number of key LEDs
@@ -46,6 +47,8 @@ const int uLEDGPIO = 25;
 const PIO pioDebounce = pio0;
 const PIO pioLeds = pio1;
 const float debounceTimeMs = 10.0f;
+
+SLedConfiguration ledConfig = {0};
 
 // Put pixel function
 void sw_put_pixel(uint32_t pixel_grb) {
@@ -81,8 +84,10 @@ void init() {
   ws2812_program_init(pioLeds, 1, offsetWs2812, uLEDGPIO, 800000, false);
 }
 
-void keyboard() {
-  if (tud_hid_ready()) {
+void keyboard() 
+{
+  if (tud_hid_ready()) 
+  {
     bool isPressed = false;
     uint8_t keycode[6] = {0};
     uint8_t keycodeIndex = 0;
@@ -98,39 +103,26 @@ void keyboard() {
         isPressed = true;
       }
     }
-      if (isPressed) {
-        // Send key report
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
-      }
-      else {
-        // Send empty report
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
-      }
-
-      // Get button input and convert to byte for next step
-      uint8_t byte0 = (!gpio_get(swGPIO[0])) ? 0xff : 0x00;
-      uint8_t byte1 = (!gpio_get(swGPIO[1])) ? 0xff : 0x00;
-      uint8_t byte2 = (!gpio_get(swGPIO[2])) ? 0xff : 0x00;
-      uint8_t bytearray[] = {byte0, byte1, byte2};
-
-      // Set array and put pixels
-      static uint8_t ledColorData[9] = {};
-
-      for(uint8_t ledNr = 0; ledNr < 3; ledNr++)
-      {
-        // Set LED data array
-        ledColorData[ledNr * 3] = bytearray[ledNr];
-        ledColorData[ledNr * 3 + 1] = bytearray[ledNr];
-        ledColorData[ledNr * 3 + 2] = bytearray[ledNr];
-
-        // Put pixels
-        sw_put_pixel(urgb_u32(
-          ledColorData[ledNr * 3],
-          ledColorData[ledNr * 3 + 1],
-          ledColorData[ledNr * 3 + 2]));
-      }
+    if (isPressed) {
+      // Send key report
+      tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
     }
+    else {
+      // Send empty report
+      tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
+    }
+
+    // Set array and put pixels
+    static uint32_t ledColorData[3] = {0};
+
+    // Fill array
+    for(uint8_t i = 0; i < swLEDsize; i++)
+      ledColorData[i] = (!gpio_get(swGPIO[i])) ? ledConfig.SwitchLedColor[i] : 0;
+
+    for(uint8_t i = 0; i < swLEDsize; i++)
+      sw_put_pixel(ledColorData[i]);
   }
+}
 
 
 // Core 1 interrupt handler
@@ -166,11 +158,15 @@ int main(void)
   {
     // Keep running the state maching until it returns false
     while (HandleStateMachine()); 
-  } 
+  }
+
+  // Read led config from memory
+  sleep_ms(500); // TODO: Remove if not needed
+  ledConfig = ReadLedConfigFromFlash();
 
   // Turn on underglow LEDs
-  u_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
-  u_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
+  u_put_pixel(ledConfig.UnderglowLedColor[0]); //Turn on LED (white)
+  u_put_pixel(ledConfig.UnderglowLedColor[1]); //Turn on LED (white)
   
   while(1) {
     tud_task();
