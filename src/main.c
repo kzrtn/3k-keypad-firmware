@@ -140,7 +140,6 @@ void core1_entry() {
 int main(void)
 {
   board_init();
-  tusb_init();
   init();
 
   multicore_launch_core1(core1_entry); // Start core 1 - must be called before configuring interrupts
@@ -168,6 +167,9 @@ int main(void)
   u_put_pixel(ledConfig.UnderglowLedColor[0]); //Turn on LED (white)
   u_put_pixel(ledConfig.UnderglowLedColor[1]); //Turn on LED (white)
   
+  // Initialize USB after the state machine
+  tusb_init();
+
   while(1) {
     tud_task();
     keyboard();
