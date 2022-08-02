@@ -48,7 +48,7 @@ const PIO pioDebounce = pio0;
 const PIO pioLeds = pio1;
 const float debounceTimeMs = 10.0f;
 
-SLedConfiguration ledConfig = {0};
+SLedConfiguration ledConfigFlash = {0};
 
 // Put pixel function
 void sw_put_pixel(uint32_t pixel_grb) {
@@ -117,7 +117,7 @@ void keyboard()
 
     // Fill array
     for(uint8_t i = 0; i < swLEDsize; i++)
-      ledColorData[i] = (!gpio_get(swGPIO[i])) ? ledConfig.SwitchLedColor[i] : 0;
+      ledColorData[i] = (!gpio_get(swGPIO[i])) ? ledConfigFlash.SwitchLedColor[i] : 0;
 
     for(uint8_t i = 0; i < swLEDsize; i++)
       sw_put_pixel(ledColorData[i]);
@@ -161,11 +161,11 @@ int main(void)
 
   // Read led config from memory
   sleep_ms(500); // TODO: Remove if not needed
-  ledConfig = ReadLedConfigFromFlash();
+  ledConfigFlash = ReadLedConfigFromFlash();
 
   // Turn on underglow LEDs
-  u_put_pixel(ledConfig.UnderglowLedColor[0]); //Turn on LED (white)
-  u_put_pixel(ledConfig.UnderglowLedColor[1]); //Turn on LED (white)
+  u_put_pixel(ledConfigFlash.UnderglowLedColor[0]);
+  u_put_pixel(ledConfigFlash.UnderglowLedColor[1]);
   
   // Initialize USB after the state machine
   tusb_init();

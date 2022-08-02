@@ -21,7 +21,7 @@ bool Handle_UnderglowConfig();
 bool Handle_SwitchLedConfig();
 void SaveLEdConfig();
 
-static SLedConfiguration ledConfig = {0};
+static SLedConfiguration newLedConfig = {0};
 
 bool HandleStateMachine()
 {
@@ -63,12 +63,12 @@ bool Handle_ChooseLed()
   }
   else if (event.KeyPressed[2])
   {
-    ledConfig.SwitchLedColor[0] = urgb_u32(100, 0, 0);
-    ledConfig.SwitchLedColor[1] = urgb_u32(100, 0, 0);
-    ledConfig.SwitchLedColor[2] = urgb_u32(100, 0, 0);
-    ledConfig.UnderglowLedColor[0] = urgb_u32(100, 0, 0);
-    ledConfig.UnderglowLedColor[1] = urgb_u32(100, 0, 0);
-    SaveLEdConfig();
+    newLedConfig.SwitchLedColor[0] = urgb_u32(100, 0, 0);
+    newLedConfig.SwitchLedColor[1] = urgb_u32(100, 0, 0);
+    newLedConfig.SwitchLedColor[2] = urgb_u32(100, 0, 0);
+    newLedConfig.UnderglowLedColor[0] = urgb_u32(100, 0, 0);
+    newLedConfig.UnderglowLedColor[1] = urgb_u32(100, 0, 0);
+    SaveLedConfig();
     return false; // Exit state machine
   }
 
@@ -89,12 +89,12 @@ bool Handle_UnderglowConfig()
   SEvent event = GetEvent();
   if (event.KeyPressed[2])
   {
-    ledConfig.SwitchLedColor[0] = urgb_u32(0, 100, 0);
-    ledConfig.SwitchLedColor[1] = urgb_u32(0, 100, 0);
-    ledConfig.SwitchLedColor[2] = urgb_u32(0, 100, 0);
-    ledConfig.UnderglowLedColor[0] = urgb_u32(0, 100, 0);
-    ledConfig.UnderglowLedColor[1] = urgb_u32(0, 100, 0);
-    SaveLEdConfig();
+    newLedConfig.SwitchLedColor[0] = urgb_u32(0, 100, 0);
+    newLedConfig.SwitchLedColor[1] = urgb_u32(0, 100, 0);
+    newLedConfig.SwitchLedColor[2] = urgb_u32(0, 100, 0);
+    newLedConfig.UnderglowLedColor[0] = urgb_u32(0, 100, 0);
+    newLedConfig.UnderglowLedColor[1] = urgb_u32(0, 100, 0);
+    SaveLedConfig();
     return false; // Exit state machine
   }
 
@@ -116,20 +116,20 @@ bool Handle_SwitchLedConfig()
   if (event.KeyPressed[2])
   {
 
-    ledConfig.SwitchLedColor[0] = urgb_u32(0, 0, 100);
-    ledConfig.SwitchLedColor[1] = urgb_u32(0, 0, 100);
-    ledConfig.SwitchLedColor[2] = urgb_u32(0, 0, 100);
-    ledConfig.UnderglowLedColor[0] = urgb_u32(0, 0, 100);
-    ledConfig.UnderglowLedColor[1] = urgb_u32(0, 0, 100);
-    SaveLEdConfig();
+    newLedConfig.SwitchLedColor[0] = urgb_u32(0, 0, 100);
+    newLedConfig.SwitchLedColor[1] = urgb_u32(0, 0, 100);
+    newLedConfig.SwitchLedColor[2] = urgb_u32(0, 0, 100);
+    newLedConfig.UnderglowLedColor[0] = urgb_u32(0, 0, 100);
+    newLedConfig.UnderglowLedColor[1] = urgb_u32(0, 0, 100);
+    SaveLedConfig();
     return false; // Exit state machine
   }
 
   return true;
 }
 
-void SaveLEdConfig()
+void SaveLedConfig()
 {
-  WriteLedConfigToFlash(ledConfig);
+  WriteLedConfigToFlash(newLedConfig);
   // TODO: IS a delay needed here to wait for the memory to be written?
 }
