@@ -12,15 +12,9 @@
 // - multicore was removed
 #define MAIN_C
 
-#include "globals.h"
-
 #include "bsp/board.h"
 #include "tusb.h"
 #include "pico/stdlib.h"
-
-//multicore stuff
-#include "pico/multicore.h"
-#include "hardware/irq.h"
 
 //WS2812B stuff
 #include "hardware/pio.h"
