@@ -8,22 +8,51 @@
 // - Figure out how to move all lighting to second core
 // - Add debounce
 // - Add configuration software for light modes and custom key config (somehow...)
+
+// - multicore was removed
 #define MAIN_C
 
 #include "globals.h"
 
-// For debounce
-bool prev_sw_value[swGPIOsize]; //not sure if I'll need this yet
-uint64_t swTimestamp[swGPIOsize];
-uint8_t swReport;
+#include "bsp/board.h"
+#include "tusb.h"
+#include "pico/stdlib.h"
+
+//multicore stuff
+#include "pico/multicore.h"
+#include "hardware/irq.h"
+
+//WS2812B stuff
+#include "hardware/pio.h"
+#include "hardware/clocks.h"
+#include "ws2812.pio.h"
+
+//debounce stuff
+#include "debounce.pio.h"
+
+#include "usb_descriptors.h"
+
+#define swGPIOsize 3 // Number of key switches
+#define swLEDsize 3 // Number of key LEDs
+#define uLEDsize 2 // Number of underglow LEDs
+
+const uint8_t swKeycode[] = {HID_KEY_Z, HID_KEY_X, HID_KEY_C};
+
+const uint8_t swGPIO[] = {27, 28, 29};
+const int swLEDGPIO = 26;
+const int uLEDGPIO = 25;
+
+const PIO pioDebounce = pio0;
+const PIO pioLeds = pio1;
+const float debounceTimeMs = 10.0f;
 
 // Put pixel function
 static inline void sw_put_pixel(uint32_t pixel_grb) {
-  pio_sm_put_blocking(pio0, 0, pixel_grb << 8u);
+  pio_sm_put_blocking(pioLeds, 0, pixel_grb << 8u);
 }
 
 static inline void u_put_pixel(uint32_t pixel_grb) {
-  pio_sm_put_blocking(pio1, 0, pixel_grb << 8u);
+  pio_sm_put_blocking(pioLeds, 1, pixel_grb << 8u);
 }
 
 static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
@@ -36,23 +65,19 @@ static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
 /*------------- INIT -------------*/
 void init() {
   // Set up button pins
-  for (int i = 0; i < swGPIOsize; i++) {
-    gpio_init(swGPIO[i]);
-    gpio_set_function(swGPIO[i], GPIO_FUNC_SIO);
-    gpio_set_dir(swGPIO[i], GPIO_IN);
-    gpio_pull_up(swGPIO[i]);
+  uint offsetDebounce = pio_add_program(pioDebounce, &debounce_program);
+
+  for (int i = 0; i < swGPIOsize; i++)
+  {
+    debounce_program_init(pioDebounce, i, offsetDebounce, swGPIO[i]);
+    pio_sm_set_enabled(pioDebounce, i, true);
+    debounce_program_set_debounce(pioDebounce, i, debounceTimeMs);
   }
 
-  // Set up switch LEDs
-  PIO pio = pio0;
-  int sm = 0;
-  uint offset = pio_add_program(pio, &ws2812_program);
-  ws2812_program_init(pio, sm, offset, swLEDGPIO, 800000, false);
-
-  // Set up underglow LEDs
-  PIO pio_1 = pio1;
-  uint offset1 = pio_add_program(pio_1, &ws2812_program);
-  ws2812_program_init(pio_1, sm, offset1, uLEDGPIO, 800000, false);
+  // Set up switch LEDs and underglow LEDs
+  uint offsetWs2812 = pio_add_program(pioLeds, &ws2812_program);
+  ws2812_program_init(pioLeds, 0, offsetWs2812, swLEDGPIO, 800000, false);
+  ws2812_program_init(pioLeds, 1, offsetWs2812, uLEDGPIO, 800000, false);
 }
 
 void keyboard() {
@@ -69,7 +94,7 @@ void keyboard() {
     // 6 key rollover, a limitation by USB HID, NKRO is possible but... is it even needed?
     for (uint8_t i = 0; i < swGPIOsize; i++)
     {
-      if(!gpio_get(swGPIO[i]))
+      if(debounce_program_get_button_pressed(pioDebounce, i))
       {
         keycode[keycodeIndex] = swKeycode[i];
         keycodeIndex++;
@@ -112,26 +137,12 @@ void keyboard() {
   }
 }
 
-
-// Core 1 interrupt handler
-void core1_interrupt_handler() {
-
-}
-
-/*------------- CORE 1 MAIN -------------*/
-void core1_entry() {
-
-}
-
-
 /*------------- CORE 0 MAIN -------------*/
 int main(void)
 {
   board_init();
   tusb_init();
   init();
-
-  multicore_launch_core1(core1_entry); // Start core 1 - must be called before configuring interrupts
 
   // Turn on underglow LEDs
   u_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
