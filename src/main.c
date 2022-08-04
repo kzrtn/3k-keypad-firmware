@@ -56,56 +56,61 @@ void init() {
 }
 
 void keyboard() {
-  if (tud_hid_ready()) {
+  // This variable remembers its values the next time this function is executed
+  static uint8_t keycodePrevious[6] = {0};
+
+  if (tud_hid_ready())
+  {
     bool isPressed = false;
     uint8_t keycode[6] = {0};
     uint8_t keycodeIndex = 0;
 
     // Fill keycode array
     // 6 key rollover, a limitation by USB HID, NKRO is possible but... is it even needed?
-    for (uint8_t i = 0; i < swGPIOsize; i++) {
-      if(!gpio_get(swGPIO[i])) {
-        swTimestamp[i] = time_us_64;
-
+    for (uint8_t i = 0; i < swGPIOsize; i++)
+    {
+      if(!gpio_get(swGPIO[i]))
+      {
         keycode[keycodeIndex] = swKeycode[i];
         keycodeIndex++;
         
         isPressed = true;
       }
     }
-      if (isPressed) {
-        // Send key report
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
-      }
-      else {
-        // Send empty report
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
-      }
 
-      // Get button input and convert to byte for next step
-      uint8_t byte0 = (!gpio_get(swGPIO[0])) ? 0xff : 0x00;
-      uint8_t byte1 = (!gpio_get(swGPIO[1])) ? 0xff : 0x00;
-      uint8_t byte2 = (!gpio_get(swGPIO[2])) ? 0xff : 0x00;
-      uint8_t bytearray[] = {byte0, byte1, byte2};
+    // If the keycode changed, send a HID report
+    if (memcmp(keycode, keycodePrevious, 6) != 0)
+    {
+      tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
 
-      // Set array and put pixels
-      static uint8_t ledColorData[9] = {};
+      // Save the changed keycode
+      memcpy(keycodePrevious, keycode, 6);
+    }
 
-      for(uint8_t ledNr = 0; ledNr < 3; ledNr++)
-      {
-        // Set LED data array
-        ledColorData[ledNr * 3] = bytearray[ledNr];
-        ledColorData[ledNr * 3 + 1] = bytearray[ledNr];
-        ledColorData[ledNr * 3 + 2] = bytearray[ledNr];
+    // Get button input and convert to byte for next step
+    uint8_t byte0 = (!gpio_get(swGPIO[0])) ? 0xff : 0x00;
+    uint8_t byte1 = (!gpio_get(swGPIO[1])) ? 0xff : 0x00;
+    uint8_t byte2 = (!gpio_get(swGPIO[2])) ? 0xff : 0x00;
+    uint8_t bytearray[] = {byte0, byte1, byte2};
 
-        // Put pixels
-        sw_put_pixel(urgb_u32(
-          ledColorData[ledNr * 3],
-          ledColorData[ledNr * 3 + 1],
-          ledColorData[ledNr * 3 + 2]));
-      }
+    // Set array and put pixels
+    static uint8_t ledColorData[9] = {};
+
+    for(uint8_t ledNr = 0; ledNr < 3; ledNr++)
+    {
+      // Set LED data array
+      ledColorData[ledNr * 3] = bytearray[ledNr];
+      ledColorData[ledNr * 3 + 1] = bytearray[ledNr];
+      ledColorData[ledNr * 3 + 2] = bytearray[ledNr];
+
+      // Put pixels
+      sw_put_pixel(urgb_u32(
+        ledColorData[ledNr * 3],
+        ledColorData[ledNr * 3 + 1],
+        ledColorData[ledNr * 3 + 2]));
     }
   }
+}
 
 
 // Core 1 interrupt handler
