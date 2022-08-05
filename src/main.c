@@ -84,9 +84,12 @@ void init() {
   ws2812_program_init(pioLeds, 1, offsetWs2812, uLEDGPIO, 800000, false);
 }
 
-void keyboard() 
-{
-  if (tud_hid_ready()) 
+
+void keyboard() {
+  // This variable remembers its values the next time this function is executed
+  static uint8_t keycodePrevious[6] = {0};
+
+  if (tud_hid_ready())
   {
     bool isPressed = false;
     uint8_t keycode[6] = {0};
@@ -103,13 +106,14 @@ void keyboard()
         isPressed = true;
       }
     }
-    if (isPressed) {
-      // Send key report
+
+    // If the keycode changed, send a HID report
+    if (memcmp(keycode, keycodePrevious, 6) != 0)
+    {
       tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
-    }
-    else {
-      // Send empty report
-      tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
+
+      // Save the changed keycode
+      memcpy(keycodePrevious, keycode, 6);
     }
 
     // Set array and put pixels
