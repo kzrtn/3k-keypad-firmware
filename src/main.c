@@ -31,9 +31,12 @@
 
 #include "usb_descriptors.h"
 
-#define swGPIOsize 3 // Number of key switches
-#define swLEDsize 3 // Number of key LEDs
-#define uLEDsize 2 // Number of underglow LEDs
+#include "StateMachine.h"
+#include "FlashStorage.h"
+
+const uint8_t swGPIOsize = 3; // Number of key switches
+const uint8_t swLEDsize = 3;  // Number of key LEDs
+const uint8_t uLEDsize = 2;   // Number of underglow LEDs
 
 const uint8_t swKeycode[] = {HID_KEY_Z, HID_KEY_X, HID_KEY_C};
 
@@ -45,16 +48,18 @@ const PIO pioDebounce = pio0;
 const PIO pioLeds = pio1;
 const float debounceTimeMs = 10.0f;
 
+SLedConfiguration ledConfigFlash = {0};
+
 // Put pixel function
-static inline void sw_put_pixel(uint32_t pixel_grb) {
+void sw_put_pixel(uint32_t pixel_grb) {
   pio_sm_put_blocking(pioLeds, 0, pixel_grb << 8u);
 }
 
-static inline void u_put_pixel(uint32_t pixel_grb) {
+void u_put_pixel(uint32_t pixel_grb) {
   pio_sm_put_blocking(pioLeds, 1, pixel_grb << 8u);
 }
 
-static inline uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
+uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b) {
   return ((uint32_t)(r) << 8) |
         ((uint32_t)(g) << 16) |
         (uint32_t)(b);
@@ -79,9 +84,14 @@ void init() {
   ws2812_program_init(pioLeds, 1, offsetWs2812, uLEDGPIO, 800000, false);
 }
 
+
 void keyboard() {
-  if (tud_hid_ready()) {
-    bool isPressed = false;
+  // This variable remembers its values the next time this function is executed
+  static uint8_t keycodePrevious[6] = {0};
+  static uint64_t timestampUs = 0;
+
+  if (tud_hid_ready())
+  {
     uint8_t keycode[6] = {0};
     uint8_t keycodeIndex = 0;
 
@@ -93,42 +103,35 @@ void keyboard() {
       {
         keycode[keycodeIndex] = swKeycode[i];
         keycodeIndex++;
-        isPressed = true;
       }
     }
-      if (isPressed) {
-        // Send key report
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
-      }
-      else {
-        // Send empty report
-        tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, NULL);
-      }
 
-      // Get button input and convert to byte for next step
-      uint8_t byte0 = (!gpio_get(swGPIO[0])) ? 0xff : 0x00;
-      uint8_t byte1 = (!gpio_get(swGPIO[1])) ? 0xff : 0x00;
-      uint8_t byte2 = (!gpio_get(swGPIO[2])) ? 0xff : 0x00;
-      uint8_t bytearray[] = {byte0, byte1, byte2};
+    // If the keycode changed, send a HID report
+    if (memcmp(keycode, keycodePrevious, 6) != 0)
+    {
+      tud_hid_keyboard_report(REPORT_ID_KEYBOARD, 0, keycode);
 
-      // Set array and put pixels
-      static uint8_t ledColorData[9] = {};
+      // Save the changed keycode
+      memcpy(keycodePrevious, keycode, 6);
+    }
 
-      for(uint8_t ledNr = 0; ledNr < 3; ledNr++)
-      {
-        // Set LED data array
-        ledColorData[ledNr * 3] = bytearray[ledNr];
-        ledColorData[ledNr * 3 + 1] = bytearray[ledNr];
-        ledColorData[ledNr * 3 + 2] = bytearray[ledNr];
+    // Set array and put pixels
+    static uint32_t ledColorData[3] = {0};
 
-        // Put pixels
-        sw_put_pixel(urgb_u32(
-          ledColorData[ledNr * 3],
-          ledColorData[ledNr * 3 + 1],
-          ledColorData[ledNr * 3 + 2]));
-      }
+    // Fill array
+    for(uint8_t i = 0; i < swLEDsize; i++)
+      ledColorData[i] = (debounce_program_get_button_pressed(pioDebounce, i)) ? ledConfigFlash.SwitchLedColor[i] : 0;
+
+    // Only update the leds every 200 microseconds
+    if (time_reached(timestampUs + 200))
+    {
+      for(uint8_t i = 0; i < swLEDsize; i++)
+        sw_put_pixel(ledColorData[i]);
+
+      timestampUs = time_us_64();
     }
   }
+}
 
 
 // Core 1 interrupt handler
@@ -146,15 +149,44 @@ void core1_entry() {
 int main(void)
 {
   board_init();
-  tusb_init();
   init();
 
   multicore_launch_core1(core1_entry); // Start core 1 - must be called before configuring interrupts
 
-  // Turn on underglow LEDs
-  u_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
-  u_put_pixel(urgb_u32(0xff,0xff,0xff)); //Turn on LED (white)
+  // Check if the user wants to enter led config mode
+  bool enterConfigMode = true;
+
+  // All buttons must be pressed
+  for (uint8_t i = 0; i < swGPIOsize; i++)
+  {
+    enterConfigMode &= debounce_program_get_button_pressed(pioDebounce, i);
+  } 
+
+  if (enterConfigMode)
+  {
+    // Keep running the state maching until it returns false
+    while (HandleStateMachine()); 
+  }
+
+  // This fixes a bug where button 0 and 1 are still registered as pressed aftert the state machine is exited
+  for (uint8_t i = 0; i < swGPIOsize; i++)
+  {
+    gpio_pull_down(swGPIO[i]);
+    sleep_ms(10);
+    gpio_pull_up(swGPIO[i]);
+  } 
   
+
+  // Read led config from memory
+  ledConfigFlash = ReadLedConfigFromFlash();
+
+  // Turn on underglow LEDs
+  u_put_pixel(ledConfigFlash.UnderglowLedColor[0]);
+  u_put_pixel(ledConfigFlash.UnderglowLedColor[1]);
+  
+  // Initialize USB after the state machine
+  tusb_init();
+
   while(1) {
     tud_task();
     keyboard();
