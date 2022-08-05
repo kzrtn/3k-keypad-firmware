@@ -88,10 +88,10 @@ void init() {
 void keyboard() {
   // This variable remembers its values the next time this function is executed
   static uint8_t keycodePrevious[6] = {0};
+  static uint64_t timestampUs = 0;
 
   if (tud_hid_ready())
   {
-    bool isPressed = false;
     uint8_t keycode[6] = {0};
     uint8_t keycodeIndex = 0;
 
@@ -103,7 +103,6 @@ void keyboard() {
       {
         keycode[keycodeIndex] = swKeycode[i];
         keycodeIndex++;
-        isPressed = true;
       }
     }
 
@@ -121,10 +120,16 @@ void keyboard() {
 
     // Fill array
     for(uint8_t i = 0; i < swLEDsize; i++)
-      ledColorData[i] = (!gpio_get(swGPIO[i])) ? ledConfigFlash.SwitchLedColor[i] : 0;
+      ledColorData[i] = (debounce_program_get_button_pressed(pioDebounce, i)) ? ledConfigFlash.SwitchLedColor[i] : 0;
 
-    for(uint8_t i = 0; i < swLEDsize; i++)
-      sw_put_pixel(ledColorData[i]);
+    // Only update the leds every 200 microseconds
+    if (time_reached(timestampUs + 200))
+    {
+      for(uint8_t i = 0; i < swLEDsize; i++)
+        sw_put_pixel(ledColorData[i]);
+
+      timestampUs = time_us_64();
+    }
   }
 }
 
@@ -163,8 +168,16 @@ int main(void)
     while (HandleStateMachine()); 
   }
 
+  // This fixes a bug where button 0 and 1 are still registered as pressed aftert the state machine is exited
+  for (uint8_t i = 0; i < swGPIOsize; i++)
+  {
+    gpio_pull_down(swGPIO[i]);
+    sleep_ms(10);
+    gpio_pull_up(swGPIO[i]);
+  } 
+  
+
   // Read led config from memory
-  sleep_ms(500); // TODO: Remove if not needed
   ledConfigFlash = ReadLedConfigFromFlash();
 
   // Turn on underglow LEDs
