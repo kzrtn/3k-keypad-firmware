@@ -48,6 +48,14 @@ const PIO pioDebounce = pio0;
 const PIO pioLeds = pio1;
 const float debounceTimeMs = 10.0f;
 
+#define DETECT_BOUNCE
+#ifdef DETECT_BOUNCE
+const uint32_t minimumHighTimeUs = 10000; // If the button is pressed again within this duration it is considered a bounce
+bool buttonPressedPrevious[] = {false, false, false};
+uint64_t buttonReleasedUs[] = {0, 0, 0};
+bool bounceDetected[] = {false, false, false};
+#endif
+
 SLedConfiguration ledConfigFlash = {0};
 
 // Put pixel function
@@ -104,6 +112,22 @@ void keyboard() {
         keycode[keycodeIndex] = swKeycode[i];
         keycodeIndex++;
       }
+
+#ifdef DETECT_BOUNCE
+      bool pressed = debounce_program_get_button_pressed(pioDebounce, i);
+
+      // Button released
+      if (pressed != buttonPressedPrevious[i] && !pressed)
+      {
+        if (time_us_64() < buttonReleasedUs[i] + minimumHighTimeUs)
+          bounceDetected[i] = true;
+
+        buttonReleasedUs[i] = time_us_64();
+      }
+
+      buttonPressedPrevious[i] = pressed;
+#endif
+
     }
 
     // If the keycode changed, send a HID report
@@ -121,6 +145,15 @@ void keyboard() {
     // Fill array
     for(uint8_t i = 0; i < swLEDsize; i++)
       ledColorData[i] = (debounce_program_get_button_pressed(pioDebounce, i)) ? ledConfigFlash.SwitchLedColor[i] : 0;
+
+#ifdef DETECT_BOUNCE
+    // Overwrite color to show bounce error
+    for(uint8_t i = 0; i < swLEDsize; i++)
+    {
+      if (bounceDetected[i])
+        ledColorData[i] = urgb_u32(100, 0, 0);
+    }
+#endif
 
     // Only update the leds every 200 microseconds
     if (time_reached(timestampUs + 200))
