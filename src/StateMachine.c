@@ -166,7 +166,8 @@ bool Handle_UnderglowLedHue()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentUnderglowHsv.Hue = fmod(currentUnderglowHsv.Hue - 5.0f, 360.0f);
+    float newHue = currentUnderglowHsv.Hue - 5.0f;
+    currentUnderglowHsv.Hue = (newHue < 0.0f) ? 360.0f - newHue : newHue;
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
   else if (event.KeyPressed[1])
@@ -280,7 +281,8 @@ bool Handle_SwitchLedHue()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentSwitchHsv.Hue = fmod(currentSwitchHsv.Hue - 5.0f, 360.0f);
+    float newHue = currentSwitchHsv.Hue - 5.0f;
+    currentSwitchHsv.Hue = (newHue < 0.0f) ? 360.0f - newHue : newHue;
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
   else if (event.KeyPressed[1])
