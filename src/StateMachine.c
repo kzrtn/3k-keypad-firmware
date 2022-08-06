@@ -2,10 +2,30 @@
 #include "EventGenerator.h"
 #include "FlashStorage.h"
 #include "pico/stdlib.h"
+#include "math.h"
 
 void sw_put_pixel(uint32_t pixel_grb);
 void u_put_pixel(uint32_t pixel_grb);
 uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b);
+
+typedef struct Hsv
+{
+  float Hue;        // 0 to 360
+  float Saturation; // 0 to 1
+  float Value;      // 0 to 1
+} SHsv;
+
+typedef union Rgb
+{
+  struct
+  {
+    uint8_t Blue;
+    uint8_t Red;
+    uint8_t Green;
+  };
+
+  uint32_t Data;
+} SRgb;
 
 typedef enum State
 {
@@ -13,11 +33,11 @@ typedef enum State
   UnderglowLedMode,
   UnderglowLedHue,
   UnderglowLedSaturation,
-  UnderglowLedBrightness,
+  UnderglowLedValue,
   SwitchLedMode,
   SwitchLedHue,
   SwitchLedSaturation,
-  SwitchLedBrightness
+  SwitchLedValue
 } EState;
 
 static EState state = SelectLedGroup;
@@ -26,15 +46,35 @@ bool Handle_SelectLedGroup();
 bool Handle_UnderglowLedMode();
 bool Handle_UnderglowLedHue();
 bool Handle_UnderglowLedSaturation();
-bool Handle_UnderglowLedBrightness();
+bool Handle_UnderglowLedValue();
 bool Handle_SwitchLedMode();
 bool Handle_SwitchLedHue();
 bool Handle_SwitchLedSaturation();
-bool Handle_SwitchLedBrightness();
+bool Handle_SwitchLedValue();
+
+void ShowLedConfig();
 void SaveLedConfig();
+
+SRgb GetRgbFromHsv(SHsv hsv);
+SHsv GetHsvFromRgb(SRgb rgb);
+
+inline static uint8_t Min(uint8_t val1, uint8_t val2)
+{
+  return (val1 < val2) ? val1 : val2;
+}
+
+inline static uint8_t Max(uint8_t val1, uint8_t val2)
+{
+  return (val1 > val2) ? val1 : val2;
+}
 
 static SLedConfiguration newLedConfig = {0};
 bool configurationRead = false;
+
+static SRgb currentSwitchRgb = {0};
+static SRgb currentUnderglowRgb = {0};
+static SHsv currentSwitchHsv = {0};
+static SHsv currentUnderglowHsv = {0};
 
 bool HandleStateMachine()
 {
@@ -51,16 +91,16 @@ bool HandleStateMachine()
     return Handle_UnderglowLedHue();
   case UnderglowLedSaturation:
     return Handle_UnderglowLedSaturation();
-  case UnderglowLedBrightness:
-    return Handle_UnderglowLedBrightness();
+  case UnderglowLedValue:
+    return Handle_UnderglowLedValue();
   case SwitchLedMode:
     return Handle_SwitchLedMode();
   case SwitchLedHue:
     return Handle_SwitchLedHue();
   case SwitchLedSaturation:
     return Handle_SwitchLedSaturation();
-  case SwitchLedBrightness:
-    return Handle_SwitchLedBrightness();
+  case SwitchLedValue:
+    return Handle_SwitchLedValue();
 
   default:
     return false; // Should never reach this part!
@@ -76,15 +116,14 @@ bool Handle_SelectLedGroup()
   if (!configurationRead) // Read configuration only once
   {
     newLedConfig = ReadLedConfigFromFlash();
+    currentSwitchRgb.Data = newLedConfig.SwitchLedColor[0];
+    currentUnderglowRgb.Data = newLedConfig.UnderglowLedColor[0];
+    currentSwitchHsv = GetHsvFromRgb(currentSwitchRgb);
+    currentUnderglowHsv = GetHsvFromRgb(currentUnderglowRgb);
     configurationRead = true;
   }
 
-  sw_put_pixel(urgb_u32(100, 0, 0));
-  sw_put_pixel(urgb_u32(100, 0, 0));
-  sw_put_pixel(urgb_u32(100, 0, 0));
-  u_put_pixel(urgb_u32(100, 0, 0));
-  u_put_pixel(urgb_u32(100, 0, 0));
-  sleep_ms(1);
+  ShowLedConfig();
 
   // Check for event
   if (event.KeyPressed[0])
@@ -109,12 +148,7 @@ bool Handle_UnderglowLedMode()
   SEvent event = GetEvent();
 
   // Do state stuff
-  sw_put_pixel(urgb_u32(0, 0, 100));
-  sw_put_pixel(urgb_u32(0, 0, 100));
-  sw_put_pixel(urgb_u32(0, 0, 100));
-  u_put_pixel(urgb_u32(0, 0, 100));
-  u_put_pixel(urgb_u32(0, 0, 100));
-  sleep_ms(1);
+  ShowLedConfig();
 
   // Check for event
   if (event.KeyPressed[2])
@@ -130,13 +164,19 @@ bool Handle_UnderglowLedHue()
   SEvent event = GetEvent();
 
   // Do state stuff
-  sw_put_pixel(urgb_u32(0, 0, 100));
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  u_put_pixel(urgb_u32(0, 0, 100));
-  u_put_pixel(urgb_u32(0, 0, 100));
-  sleep_ms(1);
+  if (event.KeyPressed[0])
+  {
+    currentUnderglowHsv.Hue = fmod(currentUnderglowHsv.Hue - 5.0f, 360.0f);
+    currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
+  }
+  else if (event.KeyPressed[1])
+  {
+    currentUnderglowHsv.Hue = fmod(currentUnderglowHsv.Hue + 5.0f, 360.0f);
+    currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
+  }
 
+  ShowLedConfig();
+  
   // Check for event
   if (event.KeyPressed[2])
   {
@@ -151,42 +191,65 @@ bool Handle_UnderglowLedSaturation()
   SEvent event = GetEvent();
 
   // Do state stuff
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  sw_put_pixel(urgb_u32(0, 0, 100));
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  u_put_pixel(urgb_u32(0, 0, 100));
-  u_put_pixel(urgb_u32(0, 0, 100));
-  sleep_ms(1);
+  if (event.KeyPressed[0])
+  {
+    currentUnderglowHsv.Saturation -= 0.1f;
+
+    if (currentUnderglowHsv.Saturation < 0.0f)
+      currentUnderglowHsv.Saturation = 0.0f;
+
+    currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
+  }
+  else if (event.KeyPressed[1])
+  {
+    currentUnderglowHsv.Saturation += 0.1f;
+
+    if (currentUnderglowHsv.Saturation > 1.0f)
+      currentUnderglowHsv.Saturation = 1.0f;
+
+    currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
+  }
+
+  ShowLedConfig();
 
   // Check for event
   if (event.KeyPressed[2])
   {
-    state = UnderglowLedBrightness;
+    state = UnderglowLedValue;
   }
 
   return true;
 }
 
-bool Handle_UnderglowLedBrightness()
+bool Handle_UnderglowLedValue()
 {
   SEvent event = GetEvent();
 
   // Do state stuff
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  sw_put_pixel(urgb_u32(0, 0, 100));
-  u_put_pixel(urgb_u32(0, 0, 100));
-  u_put_pixel(urgb_u32(0, 0, 100));
-  sleep_ms(1);
+  if (event.KeyPressed[0])
+  {
+    currentUnderglowHsv.Value -= 0.1f;
+
+    if (currentUnderglowHsv.Value < 0.0f)
+      currentUnderglowHsv.Value = 0.0f;
+
+    currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
+  }
+  else if (event.KeyPressed[1])
+  {
+    currentUnderglowHsv.Value += 0.1f;
+
+    if (currentUnderglowHsv.Value > 1.0f)
+      currentUnderglowHsv.Value = 1.0f;
+
+    currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
+  }
+
+  ShowLedConfig();
 
   // Check for event
   if (event.KeyPressed[2])
   {
-    newLedConfig.SwitchLedColor[0] = urgb_u32(0, 0, 100);
-    newLedConfig.SwitchLedColor[1] = urgb_u32(0, 0, 100);
-    newLedConfig.SwitchLedColor[2] = urgb_u32(0, 0, 100);
-    newLedConfig.UnderglowLedColor[0] = urgb_u32(0, 0, 100);
-    newLedConfig.UnderglowLedColor[1] = urgb_u32(0, 0, 100); 
     SaveLedConfig();
     return false; // Exit state machine
   }
@@ -199,12 +262,7 @@ bool Handle_SwitchLedMode()
   SEvent event = GetEvent();
 
   // Do state stuff
-  sw_put_pixel(urgb_u32(0, 100, 0));
-  sw_put_pixel(urgb_u32(0, 100, 0));
-  sw_put_pixel(urgb_u32(0, 100, 0));
-  u_put_pixel(urgb_u32(0, 100, 0));
-  u_put_pixel(urgb_u32(0, 100, 0));
-  sleep_ms(1);
+  ShowLedConfig();
 
   // Check for event
   if (event.KeyPressed[2])
@@ -220,12 +278,18 @@ bool Handle_SwitchLedHue()
   SEvent event = GetEvent();
 
   // Do state stuff
-  sw_put_pixel(urgb_u32(0, 100, 0));
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  u_put_pixel(urgb_u32(0, 100, 0));
-  u_put_pixel(urgb_u32(0, 100, 0));
-  sleep_ms(1);
+  if (event.KeyPressed[0])
+  {
+    currentSwitchHsv.Hue = fmod(currentSwitchHsv.Hue - 5.0f, 360.0f);
+    currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
+  }
+  else if (event.KeyPressed[1])
+  {
+    currentSwitchHsv.Hue = fmod(currentSwitchHsv.Hue + 5.0f, 360.0f);
+    currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
+  }
+
+  ShowLedConfig();
 
   // Check for event
   if (event.KeyPressed[2])
@@ -241,42 +305,65 @@ bool Handle_SwitchLedSaturation()
   SEvent event = GetEvent();
 
   // Do state stuff
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  sw_put_pixel(urgb_u32(0, 100, 0));
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  u_put_pixel(urgb_u32(0, 100, 0));
-  u_put_pixel(urgb_u32(0, 100, 0));
-  sleep_ms(1);
+  if (event.KeyPressed[0])
+  {
+    currentSwitchHsv.Saturation -= 0.1f;
+
+    if (currentSwitchHsv.Saturation < 0.0f)
+      currentSwitchHsv.Saturation = 0.0f;
+
+    currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
+  }
+  else if (event.KeyPressed[1])
+  {
+    currentSwitchHsv.Saturation += 0.1f;
+
+    if (currentSwitchHsv.Saturation > 1.0f)
+      currentSwitchHsv.Saturation = 1.0f;
+
+    currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
+  }
+
+  ShowLedConfig();
 
   // Check for event
   if (event.KeyPressed[2])
   {
-    state = SwitchLedBrightness;
+    state = SwitchLedValue;
   }
 
   return true;
 }
 
-bool Handle_SwitchLedBrightness()
+bool Handle_SwitchLedValue()
 {
   SEvent event = GetEvent();
 
   // Do state stuff
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  sw_put_pixel(urgb_u32(0, 0, 0));
-  sw_put_pixel(urgb_u32(0, 100, 0));
-  u_put_pixel(urgb_u32(0, 100, 0));
-  u_put_pixel(urgb_u32(0, 100, 0));
-  sleep_ms(1);
+  if (event.KeyPressed[0])
+  {
+    currentSwitchHsv.Value -= 0.1f;
+
+    if (currentSwitchHsv.Value < 0.0f)
+      currentSwitchHsv.Value = 0.0f;
+
+    currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
+  }
+  else if (event.KeyPressed[1])
+  {
+    currentSwitchHsv.Value += 0.1f;
+
+    if (currentSwitchHsv.Value > 1.0f)
+      currentSwitchHsv.Value = 1.0f;
+
+    currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
+  }
+
+  ShowLedConfig();
 
   // Check for event
   if (event.KeyPressed[2])
   {
-    newLedConfig.SwitchLedColor[0] = urgb_u32(0, 100, 0);
-    newLedConfig.SwitchLedColor[1] = urgb_u32(0, 100, 0);
-    newLedConfig.SwitchLedColor[2] = urgb_u32(0, 100, 0);
-    newLedConfig.UnderglowLedColor[0] = urgb_u32(0, 100, 0);
-    newLedConfig.UnderglowLedColor[1] = urgb_u32(0, 100, 0); 
     SaveLedConfig();
     return false; // Exit state machine
   }
@@ -284,8 +371,92 @@ bool Handle_SwitchLedBrightness()
   return true;
 }
 
+void ShowLedConfig()
+{
+  sw_put_pixel(currentSwitchRgb.Data);
+  sw_put_pixel(currentSwitchRgb.Data);
+  sw_put_pixel(currentSwitchRgb.Data);
+  u_put_pixel(currentUnderglowRgb.Data);
+  u_put_pixel(currentUnderglowRgb.Data);
+  sleep_ms(1);
+}
+
 void SaveLedConfig()
 {
+  newLedConfig.SwitchLedColor[0] = currentSwitchRgb.Data;
+  newLedConfig.SwitchLedColor[1] = currentSwitchRgb.Data;
+  newLedConfig.SwitchLedColor[2] = currentSwitchRgb.Data;
+  newLedConfig.UnderglowLedColor[0] = currentUnderglowRgb.Data;
+  newLedConfig.UnderglowLedColor[1] = currentUnderglowRgb.Data;
+  newLedConfig.UnderglowLedColor[2] = currentUnderglowRgb.Data;
   WriteLedConfigToFlash(newLedConfig);
-  // TODO: IS a delay needed here to wait for the memory to be written?
+}
+
+// Conversion formulas from: https://www.had2know.org/technology/hsv-rgb-conversion-formula-calculator.html
+
+SRgb GetRgbFromHsv(SHsv hsv)
+{
+  SRgb rgb = {0};
+
+  float M = hsv.Value * 255.0f;
+  float m = M * (1.0f - hsv.Saturation);
+  float z = (M - m) * (1 - fabsf( fmod(hsv.Hue / 60.0f, 2) - 1) );
+
+  if (hsv.Hue < 60.0f)
+  {
+    rgb.Red = (uint8_t)M;
+    rgb.Green = (uint8_t)(z + m);
+    rgb.Blue = (uint8_t)m;
+  }
+  else if (hsv.Hue < 120.0f)
+  {
+    rgb.Red = (uint8_t)(z + m);
+    rgb.Green = (uint8_t)M;
+    rgb.Blue = (uint8_t)m;
+  }
+  else if (hsv.Hue < 180.0f)
+  {
+    rgb.Red = (uint8_t)m;
+    rgb.Green = (uint8_t)M;
+    rgb.Blue = (uint8_t)(z + m);
+  }
+  else if (hsv.Hue < 240.0f)
+  {
+    rgb.Red = (uint8_t)m;
+    rgb.Green = (uint8_t)(z + m);
+    rgb.Blue = (uint8_t)M;
+  }
+  else if (hsv.Hue < 300.0f)
+  {
+    rgb.Red = (uint8_t)(z + m);
+    rgb.Green = (uint8_t)m;
+    rgb.Blue = (uint8_t)M;
+  }
+  else
+  {
+    rgb.Red = (uint8_t)M;
+    rgb.Green = (uint8_t)m;
+    rgb.Blue = (uint8_t)(z + m);
+  }
+
+  return rgb;
+}
+
+SHsv GetHsvFromRgb(SRgb rgb)
+{
+  SHsv hsv = {0};
+
+  const uint8_t r = rgb.Red;
+  const uint8_t g = rgb.Green;
+  const uint8_t b = rgb.Blue;
+
+  float M = (float)Max(r, Max(g, b));
+  float m = (float)Min(r, Min(g, b));
+  
+  hsv.Value = M / 255.0f;
+  hsv.Saturation = (M == 0.0f) ? 0 : (1.0f - (m/M) );
+
+  float x = acosf( (r - (0.5f * g) - (0.5f * b)) / (sqrtf(r*r + g*g + b*b - r*g - r*b - g*b)));
+  hsv.Hue = (g >= b) ? x : (360.0f - x);
+  return hsv;
 }
