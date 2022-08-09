@@ -5,7 +5,8 @@ add_executable(3k_keypad
         usb_descriptors.c
         EventGenerator.c
         StateMachine.c
-        FlashStorage.c)
+        FlashStorage.c
+        ColorConversion.c)
 
 # Make sure TinyUSB can find tusb_config.h
 target_include_directories(3k_keypad PRIVATE ${CMAKE_CURRENT_LIST_DIR})

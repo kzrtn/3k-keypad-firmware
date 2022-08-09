@@ -1,31 +1,12 @@
 #include "StateMachine.h"
 #include "EventGenerator.h"
 #include "FlashStorage.h"
+#include "ColorConversion.h"
 #include "pico/stdlib.h"
-#include "math.h"
 
 void sw_put_pixel(uint32_t pixel_grb);
 void u_put_pixel(uint32_t pixel_grb);
 uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b);
-
-typedef struct Hsv
-{
-  float Hue;        // 0 to 360
-  float Saturation; // 0 to 1
-  float Value;      // 0 to 1
-} SHsv;
-
-typedef union Rgb
-{
-  struct
-  {
-    uint8_t Blue;
-    uint8_t Red;
-    uint8_t Green;
-  };
-
-  uint32_t Data;
-} SRgb;
 
 typedef enum State
 {
@@ -57,21 +38,6 @@ void SaveLedConfig();
 
 SRgb GetRgbFromHsv(SHsv hsv);
 SHsv GetHsvFromRgb(SRgb rgb);
-
-inline static uint8_t Min(uint8_t val1, uint8_t val2)
-{
-  return (val1 < val2) ? val1 : val2;
-}
-
-inline static uint8_t Max(uint8_t val1, uint8_t val2)
-{
-  return (val1 > val2) ? val1 : val2;
-}
-
-static inline float radiansToDegrees(float radians)
-{ 
-  return (radians * 57.2957795f);
-}
 
 static SLedConfiguration newLedConfig = {0};
 bool configurationRead = false;
@@ -177,7 +143,8 @@ bool Handle_UnderglowLedHue()
   }
   else if (event.KeyPressed[1])
   {
-    currentUnderglowHsv.Hue = fmod(currentUnderglowHsv.Hue + 5.0f, 360.0f);
+    float newHue = currentUnderglowHsv.Hue + 5.0f;
+    currentUnderglowHsv.Hue = (newHue > 360.0f) ? newHue - 360.0f : newHue;
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
 
@@ -292,7 +259,8 @@ bool Handle_SwitchLedHue()
   }
   else if (event.KeyPressed[1])
   {
-    currentSwitchHsv.Hue = fmod(currentSwitchHsv.Hue + 5.0f, 360.0f);
+    float newHue = currentSwitchHsv.Hue + 5.0f;
+    currentSwitchHsv.Hue = (newHue > 360.0f) ? newHue - 360.0f : newHue;
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
 
@@ -397,73 +365,4 @@ void SaveLedConfig()
   newLedConfig.UnderglowLedColor[1] = currentUnderglowRgb.Data;
   newLedConfig.UnderglowLedColor[2] = currentUnderglowRgb.Data;
   WriteLedConfigToFlash(newLedConfig);
-}
-
-// Conversion formulas from: https://www.had2know.org/technology/hsv-rgb-conversion-formula-calculator.html
-
-SRgb GetRgbFromHsv(SHsv hsv)
-{
-  SRgb rgb = {0};
-
-  float M = hsv.Value * 255.0f;
-  float m = M * (1.0f - hsv.Saturation);
-  float z = (M - m) * (1 - fabsf( fmod(hsv.Hue / 60.0f, 2) - 1) );
-
-  if (hsv.Hue < 60.0f)
-  {
-    rgb.Red = (uint8_t)M;
-    rgb.Green = (uint8_t)(z + m);
-    rgb.Blue = (uint8_t)m;
-  }
-  else if (hsv.Hue < 120.0f)
-  {
-    rgb.Red = (uint8_t)(z + m);
-    rgb.Green = (uint8_t)M;
-    rgb.Blue = (uint8_t)m;
-  }
-  else if (hsv.Hue < 180.0f)
-  {
-    rgb.Red = (uint8_t)m;
-    rgb.Green = (uint8_t)M;
-    rgb.Blue = (uint8_t)(z + m);
-  }
-  else if (hsv.Hue < 240.0f)
-  {
-    rgb.Red = (uint8_t)m;
-    rgb.Green = (uint8_t)(z + m);
-    rgb.Blue = (uint8_t)M;
-  }
-  else if (hsv.Hue < 300.0f)
-  {
-    rgb.Red = (uint8_t)(z + m);
-    rgb.Green = (uint8_t)m;
-    rgb.Blue = (uint8_t)M;
-  }
-  else
-  {
-    rgb.Red = (uint8_t)M;
-    rgb.Green = (uint8_t)m;
-    rgb.Blue = (uint8_t)(z + m);
-  }
-
-  return rgb;
-}
-
-SHsv GetHsvFromRgb(SRgb rgb)
-{
-  SHsv hsv = {0};
-
-  const uint8_t r = rgb.Red;
-  const uint8_t g = rgb.Green;
-  const uint8_t b = rgb.Blue;
-
-  float M = (float)Max(r, Max(g, b));
-  float m = (float)Min(r, Min(g, b));
-  
-  hsv.Value = M / 255.0f;
-  hsv.Saturation = (M == 0.0f) ? 0.0f : (1.0f - (m/M) );
-
-  float x = radiansToDegrees( acosf( (r - (0.5f * g) - (0.5f * b) ) / (sqrtf(r*r + g*g + b*b - r*g - r*b - g*b) ) ) );
-  hsv.Hue = (g >= b) ? x : (360.0f - x);
-  return hsv;
 }
