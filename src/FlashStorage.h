@@ -3,13 +3,28 @@
 #ifndef FLASH_STORAGE_H
 #define FLASH_STORAGE_H
 
+#include "StateMachine.h"
 #include <hardware/flash.h>
 #include <hardware/sync.h>
 
 typedef struct LedConfiguration
 {
-  uint32_t SwitchLedColor[3];
-  uint32_t UnderglowLedColor[2];
+  EMode SwitchLedMode;
+  EMode UnderglowLedMode;
+
+  // ==================== For static and reactive mode
+  uint32_t SwitchLedColor;
+  uint32_t UnderglowLedColor;
+
+  // ==================== For rgb cycle and fade mode
+  uint32_t SwitchLedSpeed;
+  float SwitchLedSaturation;
+  float SwitchLedValue;
+
+  uint32_t UnderglowLedSpeed;
+  float UnderglowLedSaturation;
+  float UnderglowLedValue;
+
   // Add more config stuff here
 } SLedConfiguration;
 
