@@ -47,6 +47,8 @@ static SRgb currentSwitchRgb = {0};
 static SRgb currentUnderglowRgb = {0};
 static SHsv currentSwitchHsv = {0};
 static SHsv currentUnderglowHsv = {0};
+static EMode currentSwitchMode = 0;
+static EMode currentUnderglowMode = 0;
 
 float BoundsWrapAround(float input, float lowerBound, float upperBound)
 {
@@ -104,6 +106,8 @@ bool Handle_SelectLedGroup()
     currentUnderglowRgb.Data = newLedConfig.UnderglowLedColor[0];
     currentSwitchHsv = GetHsvFromRgb(currentSwitchRgb);
     currentUnderglowHsv = GetHsvFromRgb(currentUnderglowRgb);
+    currentSwitchMode = newLedConfig.SwitchLedMode;
+    currentUnderglowMode = newLedConfig.UnderglowLedMode;
     configurationRead = true;
   }
 
@@ -132,7 +136,16 @@ bool Handle_UnderglowLedMode()
   SEvent event = GetEvent();
 
   // Do state stuff
-  ShowLedConfig();
+  if (event.KeyPressed[0])
+  {
+    currentUnderglowMode = BoundsWrapAround(currentUnderglowMode--, Mode_Reactive, Mode_RgbFade);
+  }
+  else if (event.KeyPressed[1])
+  {
+    currentUnderglowMode = BoundsWrapAround(currentUnderglowMode++, Mode_Reactive, Mode_RgbFade);
+  }
+
+  ShowLedConfig(); // TODO: What to show while chosing modes?
 
   // Check for event
   if (event.KeyPressed[2])
@@ -230,7 +243,16 @@ bool Handle_SwitchLedMode()
   SEvent event = GetEvent();
 
   // Do state stuff
-  ShowLedConfig();
+  if (event.KeyPressed[0])
+  {
+    currentSwitchMode = BoundsWrapAround(currentSwitchMode--, Mode_Reactive, Mode_RgbFade);
+  }
+  else if (event.KeyPressed[1])
+  {
+    currentSwitchMode = BoundsWrapAround(currentSwitchMode++, Mode_Reactive, Mode_RgbFade);
+  }
+
+  ShowLedConfig(); // TODO: What to show while chosing modes?
 
   // Check for event
   if (event.KeyPressed[2])
@@ -341,5 +363,7 @@ void SaveLedConfig()
   newLedConfig.UnderglowLedColor[0] = currentUnderglowRgb.Data;
   newLedConfig.UnderglowLedColor[1] = currentUnderglowRgb.Data;
   newLedConfig.UnderglowLedColor[2] = currentUnderglowRgb.Data;
+  newLedConfig.SwitchLedMode = currentSwitchMode;
+  newLedConfig.UnderglowLedMode = currentSwitchMode;
   WriteLedConfigToFlash(newLedConfig);
 }

@@ -3,6 +3,14 @@
 
 #include <stdbool.h>
 
+typedef enum Mode
+{
+  Mode_Reactive = 0,
+  Mode_Static,
+  Mode_RgbCycle,
+  Mode_RgbFade
+} EMode;
+
 bool HandleStateMachine();
 
 #endif
