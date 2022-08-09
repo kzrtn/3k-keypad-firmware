@@ -4,9 +4,13 @@
 #include "ColorConversion.h"
 #include "pico/stdlib.h"
 
-void sw_put_pixel(uint32_t pixel_grb);
+void sw_put_pixel(uint32_t pixel_grb);  // TODO: To be removed when these are put in their own file
 void u_put_pixel(uint32_t pixel_grb);
 uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b);
+
+const float HueStepSize = 5.0f;
+const float SaturationStepSize = 0.05f;
+const float ValueStepSize = 0.05f;
 
 typedef enum State
 {
@@ -36,9 +40,6 @@ bool Handle_SwitchLedValue();
 void ShowLedConfig();
 void SaveLedConfig();
 
-SRgb GetRgbFromHsv(SHsv hsv);
-SHsv GetHsvFromRgb(SRgb rgb);
-
 static SLedConfiguration newLedConfig = {0};
 bool configurationRead = false;
 
@@ -46,6 +47,18 @@ static SRgb currentSwitchRgb = {0};
 static SRgb currentUnderglowRgb = {0};
 static SHsv currentSwitchHsv = {0};
 static SHsv currentUnderglowHsv = {0};
+
+float BoundsWrapAround(float input, float lowerBound, float upperBound)
+{
+  const float lowerWrapped = (input < lowerBound) ? upperBound - (lowerBound - input) : input;
+  return (lowerWrapped > upperBound) ? lowerWrapped - upperBound : lowerWrapped;
+}
+
+float BoundsClamp(float input, float lowerBound, float upperBound)
+{
+  const float min = (input < lowerBound) ? lowerBound : input;
+  return (min > upperBound) ? upperBound : min;
+}
 
 bool HandleStateMachine()
 {
@@ -137,14 +150,12 @@ bool Handle_UnderglowLedHue()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    float newHue = currentUnderglowHsv.Hue - 5.0f;
-    currentUnderglowHsv.Hue = (newHue < 0.0f) ? 360.0f - newHue : newHue;
+    currentUnderglowHsv.Hue = BoundsWrapAround(currentUnderglowHsv.Hue - HueStepSize, 0.0f, 360.0f);
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
   else if (event.KeyPressed[1])
   {
-    float newHue = currentUnderglowHsv.Hue + 5.0f;
-    currentUnderglowHsv.Hue = (newHue > 360.0f) ? newHue - 360.0f : newHue;
+    currentUnderglowHsv.Hue = BoundsWrapAround(currentUnderglowHsv.Hue + HueStepSize, 0.0f, 360.0f);
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
 
@@ -166,20 +177,12 @@ bool Handle_UnderglowLedSaturation()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentUnderglowHsv.Saturation -= 0.1f;
-
-    if (currentUnderglowHsv.Saturation < 0.0f)
-      currentUnderglowHsv.Saturation = 0.0f;
-
+    currentUnderglowHsv.Saturation = BoundsClamp(currentUnderglowHsv.Saturation - SaturationStepSize, 0.0f, 1.0f);
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
   else if (event.KeyPressed[1])
   {
-    currentUnderglowHsv.Saturation += 0.1f;
-
-    if (currentUnderglowHsv.Saturation > 1.0f)
-      currentUnderglowHsv.Saturation = 1.0f;
-
+    currentUnderglowHsv.Saturation = BoundsClamp(currentUnderglowHsv.Saturation + SaturationStepSize, 0.0f, 1.0f);
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
 
@@ -201,20 +204,12 @@ bool Handle_UnderglowLedValue()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentUnderglowHsv.Value -= 0.1f;
-
-    if (currentUnderglowHsv.Value < 0.0f)
-      currentUnderglowHsv.Value = 0.0f;
-
+    currentUnderglowHsv.Value = BoundsClamp(currentUnderglowHsv.Value - ValueStepSize, 0.0f, 1.0f);
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
   else if (event.KeyPressed[1])
   {
-    currentUnderglowHsv.Value += 0.1f;
-
-    if (currentUnderglowHsv.Value > 1.0f)
-      currentUnderglowHsv.Value = 1.0f;
-
+    currentUnderglowHsv.Value = BoundsClamp(currentUnderglowHsv.Value + ValueStepSize, 0.0f, 1.0f);
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
 
@@ -253,14 +248,12 @@ bool Handle_SwitchLedHue()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    float newHue = currentSwitchHsv.Hue - 5.0f;
-    currentSwitchHsv.Hue = (newHue < 0.0f) ? 360.0f - newHue : newHue;
+    currentSwitchHsv.Hue = BoundsWrapAround(currentSwitchHsv.Hue - HueStepSize, 0.0f, 360.0f);
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
   else if (event.KeyPressed[1])
   {
-    float newHue = currentSwitchHsv.Hue + 5.0f;
-    currentSwitchHsv.Hue = (newHue > 360.0f) ? newHue - 360.0f : newHue;
+    currentSwitchHsv.Hue = BoundsWrapAround(currentSwitchHsv.Hue + HueStepSize, 0.0f, 360.0f);
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
 
@@ -282,20 +275,12 @@ bool Handle_SwitchLedSaturation()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentSwitchHsv.Saturation -= 0.1f;
-
-    if (currentSwitchHsv.Saturation < 0.0f)
-      currentSwitchHsv.Saturation = 0.0f;
-
+    currentSwitchHsv.Saturation = BoundsClamp(currentSwitchHsv.Saturation - SaturationStepSize, 0.0f, 1.0f);
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
   else if (event.KeyPressed[1])
   {
-    currentSwitchHsv.Saturation += 0.1f;
-
-    if (currentSwitchHsv.Saturation > 1.0f)
-      currentSwitchHsv.Saturation = 1.0f;
-
+    currentSwitchHsv.Saturation = BoundsClamp(currentSwitchHsv.Saturation + SaturationStepSize, 0.0f, 1.0f);
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
 
@@ -317,20 +302,12 @@ bool Handle_SwitchLedValue()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentSwitchHsv.Value -= 0.1f;
-
-    if (currentSwitchHsv.Value < 0.0f)
-      currentSwitchHsv.Value = 0.0f;
-
+    currentSwitchHsv.Value = BoundsClamp(currentSwitchHsv.Value - ValueStepSize, 0.0f, 1.0f);
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
   else if (event.KeyPressed[1])
   {
-    currentSwitchHsv.Value += 0.1f;
-
-    if (currentSwitchHsv.Value > 1.0f)
-      currentSwitchHsv.Value = 1.0f;
-
+    currentSwitchHsv.Value = BoundsClamp(currentSwitchHsv.Value + ValueStepSize, 0.0f, 1.0f);
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
 
