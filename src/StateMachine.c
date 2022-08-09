@@ -170,7 +170,11 @@ bool Handle_UnderglowLedMode()
               currentUnderglowMode == Mode_RgbFade)
     {
       state = UnderglowLedHueSpeed;
-    }   
+    }
+    else
+    {
+      return false; // Non-valid mode
+    }  
   }
 
   return true;
@@ -315,6 +319,10 @@ bool Handle_SwitchLedMode()
               currentSwitchMode == Mode_RgbFade)
     {
       state = SwitchLedHueSpeed;
+    }
+    else
+    {
+      return false; // Non-valid mode
     } 
   }
 
@@ -438,6 +446,14 @@ void LoadLedConfig()
 
   currentSwitchMode = newLedConfig.SwitchLedMode;
   currentUnderglowMode = newLedConfig.UnderglowLedMode;
+
+  // When retrieving uninitialized flash the mode can be undefined. 
+  // In that case default to known values
+  if (currentSwitchMode > Mode_RgbFade) // With a non-valid mode default to reactive for switches
+    currentSwitchMode = Mode_Reactive;
+
+  if (currentUnderglowMode > Mode_RgbFade) // With a non-valid mode default to reactive for switches
+    currentUnderglowMode = Mode_Reactive; 
 
   // For static and reactive mode 
   currentSwitchRgb.Data = newLedConfig.SwitchLedColor;
