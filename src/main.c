@@ -144,7 +144,7 @@ void keyboard() {
 
     // Fill array
     for(uint8_t i = 0; i < swLEDsize; i++)
-      ledColorData[i] = (debounce_program_get_button_pressed(pioDebounce, i)) ? ledConfigFlash.SwitchLedColor[i] : 0;
+      ledColorData[i] = (debounce_program_get_button_pressed(pioDebounce, i)) ? ledConfigFlash.SwitchLedColor : 0;
 
 #ifdef DETECT_BOUNCE
     // Overwrite color to show bounce error
@@ -214,8 +214,8 @@ int main(void)
   ledConfigFlash = ReadLedConfigFromFlash();
 
   // Turn on underglow LEDs
-  u_put_pixel(ledConfigFlash.UnderglowLedColor[0]);
-  u_put_pixel(ledConfigFlash.UnderglowLedColor[1]);
+  u_put_pixel(ledConfigFlash.UnderglowLedColor);
+  u_put_pixel(ledConfigFlash.UnderglowLedColor);
   
   // Initialize USB after the state machine
   tusb_init();

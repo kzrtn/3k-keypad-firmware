@@ -11,16 +11,22 @@ uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b);
 const float HueStepSize = 5.0f;
 const float SaturationStepSize = 0.05f;
 const float ValueStepSize = 0.05f;
+const uint32_t SpeedStepSize = 10;
+
+const uint32_t SpeedMin = 10;
+const uint32_t SpeedMax = 1000;
 
 typedef enum State
 {
   SelectLedGroup,
   UnderglowLedMode,
   UnderglowLedHue,
+  UnderglowLedHueSpeed,
   UnderglowLedSaturation,
   UnderglowLedValue,
   SwitchLedMode,
   SwitchLedHue,
+  SwitchLedHueSpeed,
   SwitchLedSaturation,
   SwitchLedValue
 } EState;
@@ -30,25 +36,36 @@ static EState state = SelectLedGroup;
 bool Handle_SelectLedGroup();
 bool Handle_UnderglowLedMode();
 bool Handle_UnderglowLedHue();
+bool Handle_UnderglowLedHueSpeed();
 bool Handle_UnderglowLedSaturation();
 bool Handle_UnderglowLedValue();
 bool Handle_SwitchLedMode();
 bool Handle_SwitchLedHue();
+bool Handle_SwitchLedHueSpeed();
 bool Handle_SwitchLedSaturation();
 bool Handle_SwitchLedValue();
 
+void LoadLedConfig();
 void ShowLedConfig();
 void SaveLedConfig();
 
 static SLedConfiguration newLedConfig = {0};
 bool configurationRead = false;
 
+static EMode currentSwitchMode = 0;
+static EMode currentUnderglowMode = 0;
+// For static and reactive mode
 static SRgb currentSwitchRgb = {0};
 static SRgb currentUnderglowRgb = {0};
 static SHsv currentSwitchHsv = {0};
 static SHsv currentUnderglowHsv = {0};
-static EMode currentSwitchMode = 0;
-static EMode currentUnderglowMode = 0;
+// For rgb cycle and fade mode
+static uint32_t currentSwitchLedSpeed = 0;
+static uint32_t currentUnderglowLedSpeed = 0;
+static float currentSwitchLedSaturation = 0.0f;
+static float currentUnderglowLedSaturation = 0.0f;
+static float currentSwitchLedValue = 0.0f;
+static float currentUnderglowLedValue = 0.0f;
 
 float BoundsWrapAround(float input, float lowerBound, float upperBound)
 {
@@ -101,13 +118,7 @@ bool Handle_SelectLedGroup()
 
   if (!configurationRead) // Read configuration only once
   {
-    newLedConfig = ReadLedConfigFromFlash();
-    currentSwitchRgb.Data = newLedConfig.SwitchLedColor[0];
-    currentUnderglowRgb.Data = newLedConfig.UnderglowLedColor[0];
-    currentSwitchHsv = GetHsvFromRgb(currentSwitchRgb);
-    currentUnderglowHsv = GetHsvFromRgb(currentUnderglowRgb);
-    currentSwitchMode = newLedConfig.SwitchLedMode;
-    currentUnderglowMode = newLedConfig.UnderglowLedMode;
+    LoadLedConfig();
     configurationRead = true;
   }
 
@@ -150,7 +161,16 @@ bool Handle_UnderglowLedMode()
   // Check for event
   if (event.KeyPressed[2])
   {
-    state = UnderglowLedHue;
+    if (currentUnderglowMode == Mode_Static ||
+        currentUnderglowMode == Mode_Reactive)
+    {
+      state = UnderglowLedHue;
+    }
+    else if ( currentUnderglowMode == Mode_RgbCycle ||
+              currentUnderglowMode == Mode_RgbFade)
+    {
+      state = UnderglowLedHueSpeed;
+    }   
   }
 
   return true;
@@ -183,6 +203,31 @@ bool Handle_UnderglowLedHue()
   return true;
 }
 
+bool Handle_UnderglowLedHueSpeed()
+{
+  SEvent event = GetEvent();
+
+  // Do state stuff
+  if (event.KeyPressed[0])
+  {
+    currentUnderglowLedSpeed = BoundsClamp(currentUnderglowLedSpeed - SpeedStepSize, SpeedMin, SpeedMax);
+  }
+  else if (event.KeyPressed[1])
+  {
+    currentUnderglowLedSpeed = BoundsClamp(currentUnderglowLedSpeed + SpeedStepSize, SpeedMin, SpeedMax);
+  }
+
+  ShowLedConfig();
+  
+  // Check for event
+  if (event.KeyPressed[2])
+  {
+    state = UnderglowLedSaturation;
+  }
+
+  return true;
+}
+
 bool Handle_UnderglowLedSaturation()
 {
   SEvent event = GetEvent();
@@ -191,11 +236,13 @@ bool Handle_UnderglowLedSaturation()
   if (event.KeyPressed[0])
   {
     currentUnderglowHsv.Saturation = BoundsClamp(currentUnderglowHsv.Saturation - SaturationStepSize, 0.0f, 1.0f);
+    currentUnderglowLedSaturation = currentUnderglowHsv.Saturation;
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
   else if (event.KeyPressed[1])
   {
     currentUnderglowHsv.Saturation = BoundsClamp(currentUnderglowHsv.Saturation + SaturationStepSize, 0.0f, 1.0f);
+    currentUnderglowLedSaturation = currentUnderglowHsv.Saturation;
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
 
@@ -218,11 +265,13 @@ bool Handle_UnderglowLedValue()
   if (event.KeyPressed[0])
   {
     currentUnderglowHsv.Value = BoundsClamp(currentUnderglowHsv.Value - ValueStepSize, 0.0f, 1.0f);
+    currentUnderglowLedValue = currentUnderglowHsv.Value;
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
   else if (event.KeyPressed[1])
   {
     currentUnderglowHsv.Value = BoundsClamp(currentUnderglowHsv.Value + ValueStepSize, 0.0f, 1.0f);
+    currentUnderglowLedValue = currentUnderglowHsv.Value;
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
 
@@ -257,7 +306,16 @@ bool Handle_SwitchLedMode()
   // Check for event
   if (event.KeyPressed[2])
   {
-    state = SwitchLedHue;
+    if (currentSwitchMode == Mode_Static ||
+        currentSwitchMode == Mode_Reactive)
+    {
+      state = SwitchLedHue;
+    }
+    else if ( currentSwitchMode == Mode_RgbCycle ||
+              currentSwitchMode == Mode_RgbFade)
+    {
+      state = SwitchLedHueSpeed;
+    } 
   }
 
   return true;
@@ -290,6 +348,31 @@ bool Handle_SwitchLedHue()
   return true;
 }
 
+bool Handle_SwitchLedHueSpeed()
+{
+  SEvent event = GetEvent();
+
+  // Do state stuff
+  if (event.KeyPressed[0])
+  {
+    currentSwitchLedSpeed = BoundsClamp(currentSwitchLedSpeed - SpeedStepSize, SpeedMin, SpeedMax);
+  }
+  else if (event.KeyPressed[1])
+  {
+    currentSwitchLedSpeed = BoundsClamp(currentSwitchLedSpeed + SpeedStepSize, SpeedMin, SpeedMax);
+  }
+
+  ShowLedConfig();
+
+  // Check for event
+  if (event.KeyPressed[2])
+  {
+    state = SwitchLedSaturation;
+  }
+
+  return true;
+}
+
 bool Handle_SwitchLedSaturation()
 {
   SEvent event = GetEvent();
@@ -298,11 +381,13 @@ bool Handle_SwitchLedSaturation()
   if (event.KeyPressed[0])
   {
     currentSwitchHsv.Saturation = BoundsClamp(currentSwitchHsv.Saturation - SaturationStepSize, 0.0f, 1.0f);
+    currentSwitchLedSaturation = currentSwitchHsv.Saturation;
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
   else if (event.KeyPressed[1])
   {
     currentSwitchHsv.Saturation = BoundsClamp(currentSwitchHsv.Saturation + SaturationStepSize, 0.0f, 1.0f);
+    currentSwitchLedSaturation = currentSwitchHsv.Saturation;
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
 
@@ -325,11 +410,13 @@ bool Handle_SwitchLedValue()
   if (event.KeyPressed[0])
   {
     currentSwitchHsv.Value = BoundsClamp(currentSwitchHsv.Value - ValueStepSize, 0.0f, 1.0f);
+    currentSwitchLedValue = currentSwitchHsv.Value;
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
   else if (event.KeyPressed[1])
   {
     currentSwitchHsv.Value = BoundsClamp(currentSwitchHsv.Value + ValueStepSize, 0.0f, 1.0f);
+    currentSwitchLedValue = currentSwitchHsv.Value;
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
 
@@ -345,8 +432,34 @@ bool Handle_SwitchLedValue()
   return true;
 }
 
+void LoadLedConfig()
+{
+  newLedConfig = ReadLedConfigFromFlash();
+
+  currentSwitchMode = newLedConfig.SwitchLedMode;
+  currentUnderglowMode = newLedConfig.UnderglowLedMode;
+
+  // For static and reactive mode 
+  currentSwitchRgb.Data = newLedConfig.SwitchLedColor;
+  currentSwitchHsv = GetHsvFromRgb(currentSwitchRgb);
+
+  currentUnderglowRgb.Data = newLedConfig.UnderglowLedColor;
+  currentUnderglowHsv = GetHsvFromRgb(currentUnderglowRgb);
+  
+  // For rgb cycle and fade mode
+  currentSwitchLedSpeed = newLedConfig.SwitchLedSpeed;
+  currentSwitchLedSaturation = newLedConfig.SwitchLedSaturation;
+  currentSwitchLedValue = newLedConfig.SwitchLedValue;
+
+  currentUnderglowLedSpeed = newLedConfig.UnderglowLedSpeed;
+  currentUnderglowLedSaturation = newLedConfig.UnderglowLedSaturation;
+  currentUnderglowLedValue = newLedConfig.UnderglowLedValue;  
+}
+
 void ShowLedConfig()
 {
+  // TODO: Expand to show animations if selected
+
   sw_put_pixel(currentSwitchRgb.Data);
   sw_put_pixel(currentSwitchRgb.Data);
   sw_put_pixel(currentSwitchRgb.Data);
@@ -357,13 +470,21 @@ void ShowLedConfig()
 
 void SaveLedConfig()
 {
-  newLedConfig.SwitchLedColor[0] = currentSwitchRgb.Data;
-  newLedConfig.SwitchLedColor[1] = currentSwitchRgb.Data;
-  newLedConfig.SwitchLedColor[2] = currentSwitchRgb.Data;
-  newLedConfig.UnderglowLedColor[0] = currentUnderglowRgb.Data;
-  newLedConfig.UnderglowLedColor[1] = currentUnderglowRgb.Data;
-  newLedConfig.UnderglowLedColor[2] = currentUnderglowRgb.Data;
   newLedConfig.SwitchLedMode = currentSwitchMode;
   newLedConfig.UnderglowLedMode = currentSwitchMode;
+
+  // For static and reactive mode
+  newLedConfig.SwitchLedColor = currentSwitchRgb.Data;
+  newLedConfig.UnderglowLedColor = currentUnderglowRgb.Data;
+  
+  // For rgb cycle and fade mode
+  newLedConfig.SwitchLedSpeed = currentSwitchLedSpeed;
+  newLedConfig.SwitchLedSaturation = currentSwitchLedSaturation;
+  newLedConfig.SwitchLedValue = currentSwitchLedValue;
+
+  newLedConfig.UnderglowLedSpeed = currentUnderglowLedSpeed;
+  newLedConfig.UnderglowLedSaturation = currentUnderglowLedSaturation;
+  newLedConfig.UnderglowLedValue = currentUnderglowLedValue;
+
   WriteLedConfigToFlash(newLedConfig);
 }
