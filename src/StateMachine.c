@@ -68,9 +68,9 @@ inline static uint8_t Max(uint8_t val1, uint8_t val2)
   return (val1 > val2) ? val1 : val2;
 }
 
-static inline float degreesToRadians(float degrees)
+static inline float radiansToDegrees(float radians)
 { 
-  return (degrees * 0.0174532925f);
+  return (radians * 57.2957795f);
 }
 
 static SLedConfiguration newLedConfig = {0};
@@ -461,9 +461,9 @@ SHsv GetHsvFromRgb(SRgb rgb)
   float m = (float)Min(r, Min(g, b));
   
   hsv.Value = M / 255.0f;
-  hsv.Saturation = (M == 0.0f) ? 0 : (1.0f - (m/M) );
+  hsv.Saturation = (M == 0.0f) ? 0.0f : (1.0f - (m/M) );
 
-  float x = acosf( degreesToRadians( (r - (0.5f * g) - (0.5f * b) ) / (sqrtf(r*r + g*g + b*b - r*g - r*b - g*b) ) ) );
+  float x = radiansToDegrees( acosf( (r - (0.5f * g) - (0.5f * b) ) / (sqrtf(r*r + g*g + b*b - r*g - r*b - g*b) ) ) );
   hsv.Hue = (g >= b) ? x : (360.0f - x);
   return hsv;
 }
