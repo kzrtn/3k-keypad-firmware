@@ -2,6 +2,7 @@
 #include "EventGenerator.h"
 #include "FlashStorage.h"
 #include "ColorConversion.h"
+#include "Animations.h"
 #include "pico/stdlib.h"
 
 void sw_put_pixel(uint32_t pixel_grb);  // TODO: To be removed when these are put in their own file
@@ -485,11 +486,48 @@ void ShowLedConfig()
   // TODO: Expand to show animations if selected
   if (time_reached(timestampUs + 1000))
   {
-    sw_put_pixel(currentSwitchRgb.Data);
-    sw_put_pixel(currentSwitchRgb.Data);
-    sw_put_pixel(currentSwitchRgb.Data);
-    u_put_pixel(currentUnderglowRgb.Data);
-    u_put_pixel(currentUnderglowRgb.Data);
+    switch (currentSwitchMode)
+    {
+    case Mode_Static:
+    case Mode_Reactive:
+    case Mode_ReactiveInverse:
+      sw_put_pixel(currentSwitchRgb.Data);
+      sw_put_pixel(currentSwitchRgb.Data);
+      sw_put_pixel(currentSwitchRgb.Data);
+      break;
+    case Mode_RgbCycle:
+      sw_put_pixel(GetColorRgbCycle().Data);
+      sw_put_pixel(GetColorRgbCycle().Data);
+      sw_put_pixel(GetColorRgbCycle().Data);
+      break;
+    case Mode_RgbFade:
+      sw_put_pixel(GetColorRgbFade().Data);
+      sw_put_pixel(GetColorRgbFade().Data);
+      sw_put_pixel(GetColorRgbFade().Data);
+      break;
+    
+    default:
+      break;
+    }
+
+    switch (currentUnderglowMode)
+    {
+    case Mode_Static:
+      u_put_pixel(currentUnderglowRgb.Data);
+      u_put_pixel(currentUnderglowRgb.Data);
+      break;
+    case Mode_RgbCycle:
+      u_put_pixel(GetColorRgbCycle().Data);
+      u_put_pixel(GetColorRgbCycle().Data);
+      break;
+    case Mode_RgbFade:
+      u_put_pixel(GetColorRgbFade().Data);
+      u_put_pixel(GetColorRgbFade().Data);
+      break;
+    
+    default:
+      break;
+    }
 
     timestampUs = time_us_64();
   }
@@ -530,14 +568,12 @@ void ShowUnderglowLedModeSelection()
       sw_put_pixel(0);
       break;
     case Mode_RgbCycle:
-      // TODO: Add animation
-      sw_put_pixel(0);
+      sw_put_pixel(GetColorRgbCycle().Data);
       sw_put_pixel(0);
       sw_put_pixel(0);
       break;
     case Mode_RgbFade:
-      // TODO: Add animation
-      sw_put_pixel(0);
+      sw_put_pixel(GetColorRgbFade().Data);
       sw_put_pixel(0);
       sw_put_pixel(0);
       break;
@@ -562,15 +598,13 @@ void ShowSwitchLedModeSelection()
       sw_put_pixel(0);
       break;
     case Mode_RgbCycle:
-      // TODO: Add animation
       sw_put_pixel(0);
-      sw_put_pixel(0);
+      sw_put_pixel(GetColorRgbCycle().Data);
       sw_put_pixel(0);
       break;
     case Mode_RgbFade:
-      // TODO: Add animation
       sw_put_pixel(0);
-      sw_put_pixel(0);
+      sw_put_pixel(GetColorRgbFade().Data);
       sw_put_pixel(0);
       break;
     case Mode_Reactive:
