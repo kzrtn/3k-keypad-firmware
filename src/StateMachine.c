@@ -53,6 +53,7 @@ void ShowSwitchLedModeSelection();
 
 static SLedConfiguration newLedConfig = {0};
 bool configurationRead = false;
+static uint64_t timestampUs = 0;
 
 static EMode currentSwitchMode = 0;
 static EMode currentUnderglowMode = 0;
@@ -482,13 +483,16 @@ void LoadLedConfig()
 void ShowLedConfig()
 {
   // TODO: Expand to show animations if selected
+  if (time_reached(timestampUs + 1000))
+  {
+    sw_put_pixel(currentSwitchRgb.Data);
+    sw_put_pixel(currentSwitchRgb.Data);
+    sw_put_pixel(currentSwitchRgb.Data);
+    u_put_pixel(currentUnderglowRgb.Data);
+    u_put_pixel(currentUnderglowRgb.Data);
 
-  sw_put_pixel(currentSwitchRgb.Data);
-  sw_put_pixel(currentSwitchRgb.Data);
-  sw_put_pixel(currentSwitchRgb.Data);
-  u_put_pixel(currentUnderglowRgb.Data);
-  u_put_pixel(currentUnderglowRgb.Data);
-  sleep_ms(1);
+    timestampUs = time_us_64();
+  }
 }
 
 void SaveLedConfig()
@@ -514,68 +518,74 @@ void SaveLedConfig()
 
 void ShowUnderglowLedModeSelection()
 {
-  switch (currentUnderglowMode)
+  if (time_reached(timestampUs + 1000))
   {
-  case Mode_Static:     
-    sw_put_pixel(urgb_u32(0, 100, 0));
-    sw_put_pixel(0);
-    sw_put_pixel(0);
-    break;
-  case Mode_RgbCycle:
-    // TODO: Add animation
-    sw_put_pixel(0);
-    sw_put_pixel(0);
-    sw_put_pixel(0);
-    break;
-  case Mode_RgbFade:
-    // TODO: Add animation
-    sw_put_pixel(0);
-    sw_put_pixel(0);
-    sw_put_pixel(0);
-    break;
-  
-  default:
-    break;
-  }
+    timestampUs = time_us_64();
 
-  sleep_ms(1);
+    switch (currentUnderglowMode)
+    {
+    case Mode_Static:     
+      sw_put_pixel(urgb_u32(0, 100, 0)); // Green
+      sw_put_pixel(0);
+      sw_put_pixel(0);
+      break;
+    case Mode_RgbCycle:
+      // TODO: Add animation
+      sw_put_pixel(0);
+      sw_put_pixel(0);
+      sw_put_pixel(0);
+      break;
+    case Mode_RgbFade:
+      // TODO: Add animation
+      sw_put_pixel(0);
+      sw_put_pixel(0);
+      sw_put_pixel(0);
+      break;
+    
+    default:
+      break;
+    }
+  }
 }
 
 void ShowSwitchLedModeSelection()
 {
-  switch (currentSwitchMode)
+  if (time_reached(timestampUs + 1000))
   {
-  case Mode_Static: 
-    sw_put_pixel(0);
-    sw_put_pixel(urgb_u32(0, 100, 0));
-    sw_put_pixel(0);
-    break;
-  case Mode_RgbCycle:
-    // TODO: Add animation
-    sw_put_pixel(0);
-    sw_put_pixel(0);
-    sw_put_pixel(0);
-    break;
-  case Mode_RgbFade:
-    // TODO: Add animation
-    sw_put_pixel(0);
-    sw_put_pixel(0);
-    sw_put_pixel(0);
-    break;
-  case Mode_Reactive:
-    sw_put_pixel(0);
-    sw_put_pixel(urgb_u32(100, 0, 0)); // Red
-    sw_put_pixel(0);
-    break;
-  case Mode_ReactiveInverse:
-    sw_put_pixel(0);
-    sw_put_pixel(urgb_u32(0, 0, 100)); // Blue
-    sw_put_pixel(0);
-    break;
-  
-  default:
-    break;
-  }
+    timestampUs = time_us_64();
 
-  sleep_ms(1);
+    switch (currentSwitchMode)
+    {
+    case Mode_Static: 
+      sw_put_pixel(0);
+      sw_put_pixel(urgb_u32(0, 100, 0)); // Green
+      sw_put_pixel(0);
+      break;
+    case Mode_RgbCycle:
+      // TODO: Add animation
+      sw_put_pixel(0);
+      sw_put_pixel(0);
+      sw_put_pixel(0);
+      break;
+    case Mode_RgbFade:
+      // TODO: Add animation
+      sw_put_pixel(0);
+      sw_put_pixel(0);
+      sw_put_pixel(0);
+      break;
+    case Mode_Reactive:
+      sw_put_pixel(0);
+      sw_put_pixel(urgb_u32(100, 0, 0)); // Red
+      sw_put_pixel(0);
+      break;
+    case Mode_ReactiveInverse:
+      sw_put_pixel(0);
+      sw_put_pixel(urgb_u32(0, 0, 100)); // Blue
+      sw_put_pixel(0);
+      break;
+    
+    default:
+      break;
+    }
+  }
 }
