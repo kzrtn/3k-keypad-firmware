@@ -8,9 +8,9 @@ void sw_put_pixel(uint32_t pixel_grb);  // TODO: To be removed when these are pu
 void u_put_pixel(uint32_t pixel_grb);
 uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b);
 
-const float HueStepSize = 5.0f;
-const float SaturationStepSize = 0.05f;
-const float ValueStepSize = 0.05f;
+const float HueStepSize = 1.0f;
+const float SaturationStepSize = 0.02f;
+const float ValueStepSize = 0.02f;
 const uint32_t SpeedStepSize = 10;
 
 const uint32_t SpeedMin = 10;
