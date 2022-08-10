@@ -48,6 +48,8 @@ bool Handle_SwitchLedValue();
 void LoadLedConfig();
 void ShowLedConfig();
 void SaveLedConfig();
+void ShowUnderglowLedModeSelection();
+void ShowSwitchLedModeSelection();
 
 static SLedConfiguration newLedConfig = {0};
 bool configurationRead = false;
@@ -69,8 +71,13 @@ static float currentUnderglowLedValue = 0.0f;
 
 float BoundsWrapAround(float input, float lowerBound, float upperBound)
 {
-  const float lowerWrapped = (input < lowerBound) ? upperBound - (lowerBound - input) : input;
-  return (lowerWrapped > upperBound) ? lowerWrapped - upperBound : lowerWrapped;
+  if (input < lowerBound)
+    return upperBound - (lowerBound - input) + 1.0f;
+  
+  if (input > upperBound)
+    return lowerBound + (input - upperBound) - 1.0f;
+  
+  return input;
 }
 
 float BoundsClamp(float input, float lowerBound, float upperBound)
@@ -149,14 +156,14 @@ bool Handle_UnderglowLedMode()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentUnderglowMode = BoundsWrapAround(currentUnderglowMode--, Mode_Static, Mode_RgbFade);
+    currentUnderglowMode = BoundsWrapAround(currentUnderglowMode - 1, Mode_Static, Mode_RgbFade);
   }
   else if (event.KeyPressed[1])
   {
-    currentUnderglowMode = BoundsWrapAround(currentUnderglowMode++, Mode_Static, Mode_RgbFade);
+    currentUnderglowMode = BoundsWrapAround(currentUnderglowMode + 1, Mode_Static, Mode_RgbFade);
   }
 
-  ShowLedConfig(); // TODO: What to show while chosing modes?
+  ShowUnderglowLedModeSelection();
 
   // Check for event
   if (event.KeyPressed[2])
@@ -297,14 +304,14 @@ bool Handle_SwitchLedMode()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentSwitchMode = BoundsWrapAround(currentSwitchMode--, Mode_Static, Mode_ReactiveInverse);
+    currentSwitchMode = BoundsWrapAround(currentSwitchMode - 1, Mode_Static, Mode_ReactiveInverse);
   }
   else if (event.KeyPressed[1])
   {
-    currentSwitchMode = BoundsWrapAround(currentSwitchMode++, Mode_Static, Mode_ReactiveInverse);
+    currentSwitchMode = BoundsWrapAround(currentSwitchMode + 1, Mode_Static, Mode_ReactiveInverse);
   }
 
-  ShowLedConfig(); // TODO: What to show while chosing modes?
+  ShowSwitchLedModeSelection();
 
   // Check for event
   if (event.KeyPressed[2])
@@ -503,4 +510,72 @@ void SaveLedConfig()
   newLedConfig.UnderglowLedValue = currentUnderglowLedValue;
 
   WriteLedConfigToFlash(newLedConfig);
+}
+
+void ShowUnderglowLedModeSelection()
+{
+  switch (currentUnderglowMode)
+  {
+  case Mode_Static:     
+    sw_put_pixel(urgb_u32(0, 100, 0));
+    sw_put_pixel(0);
+    sw_put_pixel(0);
+    break;
+  case Mode_RgbCycle:
+    // TODO: Add animation
+    sw_put_pixel(0);
+    sw_put_pixel(0);
+    sw_put_pixel(0);
+    break;
+  case Mode_RgbFade:
+    // TODO: Add animation
+    sw_put_pixel(0);
+    sw_put_pixel(0);
+    sw_put_pixel(0);
+    break;
+  
+  default:
+    break;
+  }
+
+  sleep_ms(1);
+}
+
+void ShowSwitchLedModeSelection()
+{
+  switch (currentSwitchMode)
+  {
+  case Mode_Static: 
+    sw_put_pixel(0);
+    sw_put_pixel(urgb_u32(0, 100, 0));
+    sw_put_pixel(0);
+    break;
+  case Mode_RgbCycle:
+    // TODO: Add animation
+    sw_put_pixel(0);
+    sw_put_pixel(0);
+    sw_put_pixel(0);
+    break;
+  case Mode_RgbFade:
+    // TODO: Add animation
+    sw_put_pixel(0);
+    sw_put_pixel(0);
+    sw_put_pixel(0);
+    break;
+  case Mode_Reactive:
+    sw_put_pixel(0);
+    sw_put_pixel(urgb_u32(100, 0, 0)); // Red
+    sw_put_pixel(0);
+    break;
+  case Mode_ReactiveInverse:
+    sw_put_pixel(0);
+    sw_put_pixel(urgb_u32(0, 0, 100)); // Blue
+    sw_put_pixel(0);
+    break;
+  
+  default:
+    break;
+  }
+
+  sleep_ms(1);
 }
