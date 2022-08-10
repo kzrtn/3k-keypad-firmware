@@ -5,10 +5,11 @@
 
 typedef enum Mode
 {
-  Mode_Reactive = 0,
-  Mode_Static,
+  Mode_Static = 0,
   Mode_RgbCycle,
-  Mode_RgbFade
+  Mode_RgbFade,
+  Mode_Reactive,
+  Mode_ReactiveInverse
 } EMode;
 
 bool HandleStateMachine();

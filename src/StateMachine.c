@@ -149,11 +149,11 @@ bool Handle_UnderglowLedMode()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentUnderglowMode = BoundsWrapAround(currentUnderglowMode--, Mode_Reactive, Mode_RgbFade);
+    currentUnderglowMode = BoundsWrapAround(currentUnderglowMode--, Mode_Static, Mode_RgbFade);
   }
   else if (event.KeyPressed[1])
   {
-    currentUnderglowMode = BoundsWrapAround(currentUnderglowMode++, Mode_Reactive, Mode_RgbFade);
+    currentUnderglowMode = BoundsWrapAround(currentUnderglowMode++, Mode_Static, Mode_RgbFade);
   }
 
   ShowLedConfig(); // TODO: What to show while chosing modes?
@@ -161,8 +161,7 @@ bool Handle_UnderglowLedMode()
   // Check for event
   if (event.KeyPressed[2])
   {
-    if (currentUnderglowMode == Mode_Static ||
-        currentUnderglowMode == Mode_Reactive)
+    if (currentUnderglowMode == Mode_Static)
     {
       state = UnderglowLedHue;
     }
@@ -298,11 +297,11 @@ bool Handle_SwitchLedMode()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentSwitchMode = BoundsWrapAround(currentSwitchMode--, Mode_Reactive, Mode_RgbFade);
+    currentSwitchMode = BoundsWrapAround(currentSwitchMode--, Mode_Static, Mode_ReactiveInverse);
   }
   else if (event.KeyPressed[1])
   {
-    currentSwitchMode = BoundsWrapAround(currentSwitchMode++, Mode_Reactive, Mode_RgbFade);
+    currentSwitchMode = BoundsWrapAround(currentSwitchMode++, Mode_Static, Mode_ReactiveInverse);
   }
 
   ShowLedConfig(); // TODO: What to show while chosing modes?
@@ -311,7 +310,8 @@ bool Handle_SwitchLedMode()
   if (event.KeyPressed[2])
   {
     if (currentSwitchMode == Mode_Static ||
-        currentSwitchMode == Mode_Reactive)
+        currentSwitchMode == Mode_Reactive ||
+        currentSwitchMode == Mode_ReactiveInverse)
     {
       state = SwitchLedHue;
     }
@@ -449,11 +449,11 @@ void LoadLedConfig()
 
   // When retrieving uninitialized flash the mode can be undefined. 
   // In that case default to known values
-  if (currentSwitchMode > Mode_RgbFade) // With a non-valid mode default to reactive for switches
+  if (currentSwitchMode > Mode_ReactiveInverse) // With a non-valid mode default to reactive for switches
     currentSwitchMode = Mode_Reactive;
 
   if (currentUnderglowMode > Mode_RgbFade) // With a non-valid mode default to reactive for switches
-    currentUnderglowMode = Mode_Reactive; 
+    currentUnderglowMode = Mode_Static; 
 
   // For static and reactive mode 
   currentSwitchRgb.Data = newLedConfig.SwitchLedColor;
