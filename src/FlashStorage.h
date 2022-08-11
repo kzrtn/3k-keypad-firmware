@@ -17,11 +17,11 @@ typedef struct LedConfiguration
   uint32_t UnderglowLedColor;
 
   // ==================== For rgb cycle and fade mode
-  uint32_t SwitchLedSpeed;
+  float SwitchLedSpeed;
   float SwitchLedSaturation;
   float SwitchLedValue;
 
-  uint32_t UnderglowLedSpeed;
+  float UnderglowLedSpeed;
   float UnderglowLedSaturation;
   float UnderglowLedValue;
 

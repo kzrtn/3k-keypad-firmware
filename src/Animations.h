@@ -3,7 +3,7 @@
 
 #include "ColorConversion.h"
 
-SRgb GetColorRgbCycle();
+SRgb GetColorRgbCycle(uint64_t* prevTime, float speed, SHsv* hsv);
 SRgb GetColorRgbFade(); 
 
 #endif

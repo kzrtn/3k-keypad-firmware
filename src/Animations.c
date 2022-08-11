@@ -1,4 +1,5 @@
 #include "Animations.h"
+#include "math.h"
 
 // Make sure the contents of the functions are non-blocking.
 // So no delay or while(true) stuff
@@ -7,7 +8,7 @@
 // E.g. if the RGB animation takes 1 second to go from red to blue then the color should be blue after 1 second.
 // Wether the function was called 1 times or 10000 should not influence which color is output after 1 second.
 
-SRgb GetColorRgbCycle()
+SRgb GetColorRgbCycle(uint64_t* prevTime, float speed, SHsv* hsv)
 {
   // TODO: Implement
   SRgb temporary;

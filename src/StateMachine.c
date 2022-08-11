@@ -12,10 +12,11 @@ uint32_t urgb_u32(uint8_t r, uint8_t g, uint8_t b);
 const float HueStepSize = 1.0f;
 const float SaturationStepSize = 0.02f;
 const float ValueStepSize = 0.02f;
-const uint32_t SpeedStepSize = 10;
+const float SpeedStepSize = 2.0f;
 
-const uint32_t SpeedMin = 10;
-const uint32_t SpeedMax = 1000;
+// Note: speed is the rate of change of the hue. It is expressed in degrees per second
+const float SpeedMin = 0.0f;
+const float SpeedMax = 240.0f; 
 
 typedef enum State
 {
@@ -64,12 +65,13 @@ static SRgb currentUnderglowRgb = {0};
 static SHsv currentSwitchHsv = {0};
 static SHsv currentUnderglowHsv = {0};
 // For rgb cycle and fade mode
-static uint32_t currentSwitchLedSpeed = 0;
-static uint32_t currentUnderglowLedSpeed = 0;
-static float currentSwitchLedSaturation = 0.0f;
-static float currentUnderglowLedSaturation = 0.0f;
-static float currentSwitchLedValue = 0.0f;
-static float currentUnderglowLedValue = 0.0f;
+static float currentSwitchLedAnimationSpeed = 0;
+static float currentUnderglowLedAnimationSpeed = 0;
+static SHsv currentSwitchLedAnimationColor = {0};
+static SHsv currentUnderglowLedAnimationColor = {0};
+
+static uint64_t previousSwitchAnimationUpdateTimeUs = 0;
+static uint64_t previousUnderglowAnimationUpdateTimeUs = 0;
 
 float BoundsWrapAround(float input, float lowerBound, float upperBound)
 {
@@ -101,6 +103,8 @@ bool HandleStateMachine()
     return Handle_UnderglowLedMode();
   case UnderglowLedHue:
     return Handle_UnderglowLedHue();
+  case UnderglowLedHueSpeed:
+    return Handle_UnderglowLedHueSpeed();
   case UnderglowLedSaturation:
     return Handle_UnderglowLedSaturation();
   case UnderglowLedValue:
@@ -109,6 +113,8 @@ bool HandleStateMachine()
     return Handle_SwitchLedMode();
   case SwitchLedHue:
     return Handle_SwitchLedHue();
+  case SwitchLedHueSpeed:
+    return Handle_SwitchLedHueSpeed();
   case SwitchLedSaturation:
     return Handle_SwitchLedSaturation();
   case SwitchLedValue:
@@ -222,11 +228,11 @@ bool Handle_UnderglowLedHueSpeed()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentUnderglowLedSpeed = BoundsClamp(currentUnderglowLedSpeed - SpeedStepSize, SpeedMin, SpeedMax);
+    currentUnderglowLedAnimationSpeed = BoundsClamp(currentUnderglowLedAnimationSpeed - SpeedStepSize, SpeedMin, SpeedMax);
   }
   else if (event.KeyPressed[1])
   {
-    currentUnderglowLedSpeed = BoundsClamp(currentUnderglowLedSpeed + SpeedStepSize, SpeedMin, SpeedMax);
+    currentUnderglowLedAnimationSpeed = BoundsClamp(currentUnderglowLedAnimationSpeed + SpeedStepSize, SpeedMin, SpeedMax);
   }
 
   ShowLedConfig();
@@ -248,13 +254,13 @@ bool Handle_UnderglowLedSaturation()
   if (event.KeyPressed[0])
   {
     currentUnderglowHsv.Saturation = BoundsClamp(currentUnderglowHsv.Saturation - SaturationStepSize, 0.0f, 1.0f);
-    currentUnderglowLedSaturation = currentUnderglowHsv.Saturation;
+    currentUnderglowLedAnimationColor.Saturation = currentUnderglowHsv.Saturation;
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
   else if (event.KeyPressed[1])
   {
     currentUnderglowHsv.Saturation = BoundsClamp(currentUnderglowHsv.Saturation + SaturationStepSize, 0.0f, 1.0f);
-    currentUnderglowLedSaturation = currentUnderglowHsv.Saturation;
+    currentUnderglowLedAnimationColor.Saturation = currentUnderglowHsv.Saturation;
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
 
@@ -277,13 +283,13 @@ bool Handle_UnderglowLedValue()
   if (event.KeyPressed[0])
   {
     currentUnderglowHsv.Value = BoundsClamp(currentUnderglowHsv.Value - ValueStepSize, 0.0f, 1.0f);
-    currentUnderglowLedValue = currentUnderglowHsv.Value;
+    currentUnderglowLedAnimationColor.Value = currentUnderglowHsv.Value;
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
   else if (event.KeyPressed[1])
   {
     currentUnderglowHsv.Value = BoundsClamp(currentUnderglowHsv.Value + ValueStepSize, 0.0f, 1.0f);
-    currentUnderglowLedValue = currentUnderglowHsv.Value;
+    currentUnderglowLedAnimationColor.Value = currentUnderglowHsv.Value;
     currentUnderglowRgb = GetRgbFromHsv(currentUnderglowHsv);
   }
 
@@ -372,11 +378,11 @@ bool Handle_SwitchLedHueSpeed()
   // Do state stuff
   if (event.KeyPressed[0])
   {
-    currentSwitchLedSpeed = BoundsClamp(currentSwitchLedSpeed - SpeedStepSize, SpeedMin, SpeedMax);
+    currentSwitchLedAnimationSpeed = BoundsClamp(currentSwitchLedAnimationSpeed - SpeedStepSize, SpeedMin, SpeedMax);
   }
   else if (event.KeyPressed[1])
   {
-    currentSwitchLedSpeed = BoundsClamp(currentSwitchLedSpeed + SpeedStepSize, SpeedMin, SpeedMax);
+    currentSwitchLedAnimationSpeed = BoundsClamp(currentSwitchLedAnimationSpeed + SpeedStepSize, SpeedMin, SpeedMax);
   }
 
   ShowLedConfig();
@@ -398,13 +404,13 @@ bool Handle_SwitchLedSaturation()
   if (event.KeyPressed[0])
   {
     currentSwitchHsv.Saturation = BoundsClamp(currentSwitchHsv.Saturation - SaturationStepSize, 0.0f, 1.0f);
-    currentSwitchLedSaturation = currentSwitchHsv.Saturation;
+    currentSwitchLedAnimationColor.Saturation = currentSwitchHsv.Saturation;
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
   else if (event.KeyPressed[1])
   {
     currentSwitchHsv.Saturation = BoundsClamp(currentSwitchHsv.Saturation + SaturationStepSize, 0.0f, 1.0f);
-    currentSwitchLedSaturation = currentSwitchHsv.Saturation;
+    currentSwitchLedAnimationColor.Saturation = currentSwitchHsv.Saturation;
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
 
@@ -427,13 +433,13 @@ bool Handle_SwitchLedValue()
   if (event.KeyPressed[0])
   {
     currentSwitchHsv.Value = BoundsClamp(currentSwitchHsv.Value - ValueStepSize, 0.0f, 1.0f);
-    currentSwitchLedValue = currentSwitchHsv.Value;
+    currentSwitchLedAnimationColor.Value = currentSwitchHsv.Value;
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
   else if (event.KeyPressed[1])
   {
     currentSwitchHsv.Value = BoundsClamp(currentSwitchHsv.Value + ValueStepSize, 0.0f, 1.0f);
-    currentSwitchLedValue = currentSwitchHsv.Value;
+    currentSwitchLedAnimationColor.Value = currentSwitchHsv.Value;
     currentSwitchRgb = GetRgbFromHsv(currentSwitchHsv);
   }
 
@@ -472,13 +478,15 @@ void LoadLedConfig()
   currentUnderglowHsv = GetHsvFromRgb(currentUnderglowRgb);
   
   // For rgb cycle and fade mode
-  currentSwitchLedSpeed = newLedConfig.SwitchLedSpeed;
-  currentSwitchLedSaturation = newLedConfig.SwitchLedSaturation;
-  currentSwitchLedValue = newLedConfig.SwitchLedValue;
+  currentSwitchLedAnimationSpeed = newLedConfig.SwitchLedSpeed;
+  currentSwitchLedAnimationColor.Hue = 0.0f;
+  currentSwitchLedAnimationColor.Saturation = newLedConfig.SwitchLedSaturation;
+  currentSwitchLedAnimationColor.Value = newLedConfig.SwitchLedValue;
 
-  currentUnderglowLedSpeed = newLedConfig.UnderglowLedSpeed;
-  currentUnderglowLedSaturation = newLedConfig.UnderglowLedSaturation;
-  currentUnderglowLedValue = newLedConfig.UnderglowLedValue;  
+  currentUnderglowLedAnimationSpeed = newLedConfig.UnderglowLedSpeed;
+  currentUnderglowLedAnimationColor.Hue = 0.0f;
+  currentUnderglowLedAnimationColor.Saturation = newLedConfig.UnderglowLedSaturation;
+  currentUnderglowLedAnimationColor.Value = newLedConfig.UnderglowLedValue;  
 }
 
 void ShowLedConfig()
@@ -486,6 +494,8 @@ void ShowLedConfig()
   // TODO: Expand to show animations if selected
   if (time_reached(timestampUs + 1000))
   {
+    uint32_t rgb = 0;
+
     switch (currentSwitchMode)
     {
     case Mode_Static:
@@ -496,14 +506,16 @@ void ShowLedConfig()
       sw_put_pixel(currentSwitchRgb.Data);
       break;
     case Mode_RgbCycle:
-      sw_put_pixel(GetColorRgbCycle().Data);
-      sw_put_pixel(GetColorRgbCycle().Data);
-      sw_put_pixel(GetColorRgbCycle().Data);
+      rgb = GetColorRgbCycle(&previousSwitchAnimationUpdateTimeUs, currentSwitchLedAnimationSpeed, &currentSwitchLedAnimationColor).Data;
+      sw_put_pixel(rgb);
+      sw_put_pixel(rgb);
+      sw_put_pixel(rgb);
       break;
     case Mode_RgbFade:
-      sw_put_pixel(GetColorRgbFade().Data);
-      sw_put_pixel(GetColorRgbFade().Data);
-      sw_put_pixel(GetColorRgbFade().Data);
+      rgb = GetColorRgbFade().Data;
+      sw_put_pixel(rgb);
+      sw_put_pixel(rgb);
+      sw_put_pixel(rgb);
       break;
     
     default:
@@ -517,12 +529,14 @@ void ShowLedConfig()
       u_put_pixel(currentUnderglowRgb.Data);
       break;
     case Mode_RgbCycle:
-      u_put_pixel(GetColorRgbCycle().Data);
-      u_put_pixel(GetColorRgbCycle().Data);
+      rgb = (uint32_t)GetColorRgbCycle(&previousUnderglowAnimationUpdateTimeUs, currentUnderglowLedAnimationSpeed, &currentUnderglowLedAnimationColor).Data;
+      u_put_pixel(rgb);
+      u_put_pixel(rgb);
       break;
     case Mode_RgbFade:
-      u_put_pixel(GetColorRgbFade().Data);
-      u_put_pixel(GetColorRgbFade().Data);
+      rgb = GetColorRgbFade().Data;
+      sw_put_pixel(rgb);
+      sw_put_pixel(rgb);
       break;
     
     default:
@@ -543,13 +557,13 @@ void SaveLedConfig()
   newLedConfig.UnderglowLedColor = currentUnderglowRgb.Data;
   
   // For rgb cycle and fade mode
-  newLedConfig.SwitchLedSpeed = currentSwitchLedSpeed;
-  newLedConfig.SwitchLedSaturation = currentSwitchLedSaturation;
-  newLedConfig.SwitchLedValue = currentSwitchLedValue;
+  newLedConfig.SwitchLedSpeed = currentSwitchLedAnimationSpeed;
+  newLedConfig.SwitchLedSaturation = currentSwitchLedAnimationColor.Saturation;
+  newLedConfig.SwitchLedValue = currentSwitchLedAnimationColor.Value;
 
-  newLedConfig.UnderglowLedSpeed = currentUnderglowLedSpeed;
-  newLedConfig.UnderglowLedSaturation = currentUnderglowLedSaturation;
-  newLedConfig.UnderglowLedValue = currentUnderglowLedValue;
+  newLedConfig.UnderglowLedSpeed = currentUnderglowLedAnimationSpeed;
+  newLedConfig.UnderglowLedSaturation = currentUnderglowLedAnimationColor.Saturation;
+  newLedConfig.UnderglowLedValue = currentUnderglowLedAnimationColor.Value;
 
   WriteLedConfigToFlash(newLedConfig);
 }
@@ -568,7 +582,7 @@ void ShowUnderglowLedModeSelection()
       sw_put_pixel(0);
       break;
     case Mode_RgbCycle:
-      sw_put_pixel(GetColorRgbCycle().Data);
+      sw_put_pixel(GetColorRgbCycle(&previousUnderglowAnimationUpdateTimeUs, 90.0f, &currentUnderglowLedAnimationColor).Data);
       sw_put_pixel(0);
       sw_put_pixel(0);
       break;
@@ -599,7 +613,7 @@ void ShowSwitchLedModeSelection()
       break;
     case Mode_RgbCycle:
       sw_put_pixel(0);
-      sw_put_pixel(GetColorRgbCycle().Data);
+      sw_put_pixel(GetColorRgbCycle(&previousSwitchAnimationUpdateTimeUs, 90.0f, &currentSwitchLedAnimationColor).Data);
       sw_put_pixel(0);
       break;
     case Mode_RgbFade:
