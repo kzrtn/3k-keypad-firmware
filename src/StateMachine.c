@@ -550,7 +550,7 @@ void ShowLedConfig()
 void SaveLedConfig()
 {
   newLedConfig.SwitchLedMode = currentSwitchMode;
-  newLedConfig.UnderglowLedMode = currentSwitchMode;
+  newLedConfig.UnderglowLedMode = currentUnderglowMode;
 
   // For static and reactive mode
   newLedConfig.SwitchLedColor = currentSwitchRgb.Data;

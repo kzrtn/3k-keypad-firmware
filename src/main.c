@@ -98,6 +98,17 @@ void keyboard() {
   static uint8_t keycodePrevious[6] = {0};
   static uint64_t timestampUs = 0;
 
+  static uint32_t switchLedColorData[3] = {0};
+  static uint32_t underglowLedColorData = 0; // Both underglow leds are the same color
+
+  // If the mode is static then only set the led color once
+  if (ledConfigFlash.SwitchLedMode == Mode_Static)
+    for(uint8_t i = 0; i < swLEDsize; i++)
+        switchLedColorData[i] = ledConfigFlash.SwitchLedColor;
+  
+  if (ledConfigFlash.UnderglowLedMode == Mode_Static)
+    underglowLedColorData = ledConfigFlash.UnderglowLedColor;
+  
   if (tud_hid_ready())
   {
     uint8_t keycode[6] = {0};
@@ -139,27 +150,58 @@ void keyboard() {
       memcpy(keycodePrevious, keycode, 6);
     }
 
-    // Set array and put pixels
-    static uint32_t ledColorData[3] = {0};
-
-    // Fill array
-    for(uint8_t i = 0; i < swLEDsize; i++)
-      ledColorData[i] = (debounce_program_get_button_pressed(pioDebounce, i)) ? ledConfigFlash.SwitchLedColor : 0;
+    // Update led colors
+    switch (ledConfigFlash.SwitchLedMode)
+    {
+    case Mode_Reactive:
+      for(uint8_t i = 0; i < swLEDsize; i++)
+        switchLedColorData[i] = (debounce_program_get_button_pressed(pioDebounce, i)) ? ledConfigFlash.SwitchLedColor : 0;
+      break;
+    case Mode_ReactiveInverse:
+      for(uint8_t i = 0; i < swLEDsize; i++)
+        switchLedColorData[i] = (debounce_program_get_button_pressed(pioDebounce, i)) ? 0 : ledConfigFlash.SwitchLedColor;
+      break;
+    case Mode_RgbCycle:
+      // TODO: Update animation
+      break;
+    case Mode_RgbFade:
+      // TODO: Update animation
+      break;
+    
+    default:
+      break;
+    }
+    
+    switch (ledConfigFlash.UnderglowLedMode)
+    {
+    case Mode_RgbCycle:
+      // TODO: Update animation
+      break;
+    case Mode_RgbFade:
+      // TODO: Update animation
+      break;
+    
+    default:
+      break;
+    }
 
 #ifdef DETECT_BOUNCE
     // Overwrite color to show bounce error
     for(uint8_t i = 0; i < swLEDsize; i++)
     {
       if (bounceDetected[i])
-        ledColorData[i] = urgb_u32(100, 0, 0);
+        switchLedColorData[i] = urgb_u32(100, 0, 0);
     }
 #endif
 
-    // Only update the leds every 200 microseconds
-    if (time_reached(timestampUs + 200))
+    // Only update the leds every 500 microseconds
+    if (time_reached(timestampUs + 500))
     {
       for(uint8_t i = 0; i < swLEDsize; i++)
-        sw_put_pixel(ledColorData[i]);
+        sw_put_pixel(switchLedColorData[i]);
+
+      u_put_pixel(underglowLedColorData);
+      u_put_pixel(underglowLedColorData);
 
       timestampUs = time_us_64();
     }
@@ -209,13 +251,8 @@ int main(void)
     gpio_pull_up(swGPIO[i]);
   } 
   
-
   // Read led config from memory
   ledConfigFlash = ReadLedConfigFromFlash();
-
-  // Turn on underglow LEDs
-  u_put_pixel(ledConfigFlash.UnderglowLedColor);
-  u_put_pixel(ledConfigFlash.UnderglowLedColor);
   
   // Initialize USB after the state machine
   tusb_init();
