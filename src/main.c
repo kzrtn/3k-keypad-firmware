@@ -33,6 +33,8 @@
 
 #include "StateMachine.h"
 #include "FlashStorage.h"
+#include "ColorConversion.h"
+#include "Animations.h"
 
 const uint8_t swGPIOsize = 3; // Number of key switches
 const uint8_t swLEDsize = 3;  // Number of key LEDs
@@ -98,6 +100,15 @@ void keyboard() {
   static uint8_t keycodePrevious[6] = {0};
   static uint64_t timestampUs = 0;
 
+  // For rgb cycle and fade mode
+  uint64_t previousSwitchAnimationUpdateTimeUs = 0;
+  uint64_t previousUnderglowAnimationUpdateTimeUs = 0;
+  float currentSwitchLedAnimationSpeed = ledConfigFlash.SwitchLedSpeed;
+  float currentUnderglowLedAnimationSpeed = ledConfigFlash.UnderglowLedSpeed;
+  SHsv currentSwitchLedAnimationColor = {0.0f, ledConfigFlash.SwitchLedSaturation, ledConfigFlash.SwitchLedValue};
+  SHsv currentUnderglowLedAnimationColor = {0.0f, ledConfigFlash.UnderglowLedSaturation, ledConfigFlash.UnderglowLedValue};
+  
+  // Led color data
   static uint32_t switchLedColorData[3] = {0};
   static uint32_t underglowLedColorData = 0; // Both underglow leds are the same color
 
@@ -151,6 +162,8 @@ void keyboard() {
     }
 
     // Update led colors
+    uint32_t animationColor;
+
     switch (ledConfigFlash.SwitchLedMode)
     {
     case Mode_Reactive:
@@ -162,7 +175,9 @@ void keyboard() {
         switchLedColorData[i] = (debounce_program_get_button_pressed(pioDebounce, i)) ? 0 : ledConfigFlash.SwitchLedColor;
       break;
     case Mode_RgbCycle:
-      // TODO: Update animation
+      animationColor = GetColorRgbCycle(&previousSwitchAnimationUpdateTimeUs, currentSwitchLedAnimationSpeed, &currentSwitchLedAnimationColor).Data;
+      for(uint8_t i = 0; i < swLEDsize; i++)
+        switchLedColorData[i] = animationColor;
       break;
     case Mode_RgbFade:
       // TODO: Update animation
@@ -175,7 +190,7 @@ void keyboard() {
     switch (ledConfigFlash.UnderglowLedMode)
     {
     case Mode_RgbCycle:
-      // TODO: Update animation
+      underglowLedColorData = GetColorRgbCycle(&previousUnderglowAnimationUpdateTimeUs, currentUnderglowLedAnimationSpeed, &currentUnderglowLedAnimationColor).Data;
       break;
     case Mode_RgbFade:
       // TODO: Update animation
